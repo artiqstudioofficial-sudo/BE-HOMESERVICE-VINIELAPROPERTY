@@ -1,6 +1,7 @@
 const misc = require("../helpers/response");
 const { encryptPassword } = require("../helpers/utils");
-const admin = require("../models/admin");
+const Admin = require("../models/admin");
+const Applicant = require("../models/applicant");
 
 module.exports = {
   storeUser: async (req, res) => {
@@ -14,9 +15,34 @@ module.exports = {
         position,
       };
 
-      await admin.storeUser(data);
+      await Admin.storeUser(data);
 
       misc.response(res, 200, false, "User created successfully");
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  techSchedule: async (req, res) => {
+    const { schedule_date } = req.query;
+
+    try {
+      var data = {
+        schedule_date: schedule_date,
+      };
+
+      var schedules = await Applicant.getTechSchedule(data);
+
+      console.log(schedules);
+
+      misc.response(
+        res,
+        200,
+        false,
+        "List tech schedule successfully",
+        schedules
+      );
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
