@@ -5,6 +5,6 @@ const jobVacancy = require("../controllers/job_vacancy");
 Route.get("/list", jobVacancy.list);
 Route.put("/update/:id", jobVacancy.update);
 Route.delete("/delete/:id", jobVacancy.delete);
-Route.store("/store", jobVacancy.store);
+Route.post("/store", jobVacancy.store);
 
 module.exports = Route;

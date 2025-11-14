@@ -33,6 +33,7 @@ const server = app.listen(port, () => {
   console.log(`\n\t *** Server listening on PORT ${port}  ***`);
 });
 
-app.get("*", (_req, res) => res.sendStatus(404));
-
+app.use((_, res) => {
+  res.sendStatus(404);
+});
 module.exports = server;

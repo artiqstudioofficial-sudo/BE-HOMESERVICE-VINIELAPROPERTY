@@ -5,6 +5,6 @@ const applicant = require("../controllers/applicant");
 Route.get("/list", applicant.list);
 Route.put("/update/:id", applicant.update);
 Route.delete("/delete/:id", applicant.delete);
-Route.store("/store", applicant.store);
+Route.post("/form", applicant.form);
 
 module.exports = Route;

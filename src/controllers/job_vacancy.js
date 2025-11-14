@@ -1,4 +1,3 @@
-const Banner = require("../models/Banner");
 const misc = require("../helpers/response");
 
 module.exports = {
