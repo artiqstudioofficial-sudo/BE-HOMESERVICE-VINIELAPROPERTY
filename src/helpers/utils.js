@@ -1,25 +1,19 @@
-const {
-  format: format,
-  createLogger: createLogger,
-  transports: transports,
-} = require("winston");
+const { format: format, createLogger: createLogger, transports: transports } = require('winston');
 
-const bcrypt = require("bcryptjs");
-const axios = require("axios");
-const moment = require("moment-timezone");
+const bcrypt = require('bcryptjs');
+const axios = require('axios');
+const moment = require('moment-timezone');
 
 const { combine, timestamp, label, printf } = format;
 
 const customFormat = printf(({ level, message, label, _ }) => {
-  return `${moment().format(
-    "YYYY-MM-DD HH:mm:ss"
-  )} [${label}] ${level.toUpperCase()}: ${message}`;
+  return `${moment().format('YYYY-MM-DD HH:mm:ss')} [${label}] ${level.toUpperCase()}: ${message}`;
 });
 
 var options = {
   file: {
-    level: "info",
-    filename: `${process.cwd()}/src/logs/${moment().format("YYYY-MM-DD")}.log`,
+    level: 'info',
+    filename: `${process.cwd()}/src/logs/${moment().format('YYYY-MM-DD')}.log`,
     handleExceptions: true,
     json: true,
     maxsize: 5242880,
@@ -30,32 +24,30 @@ var options = {
 
 module.exports = {
   pad(width, string, padding) {
-    return width <= string.length
-      ? string
-      : this.pad(width, padding + string, padding);
+    return width <= string.length ? string : this.pad(width, padding + string, padding);
   },
 
   escapeHtml(text) {
-    return text.replace(/<[^>]*>?/gm, "");
+    return text.replace(/<[^>]*>?/gm, '');
   },
 
   validateEmail: (email) => {
     return String(email)
       .toLowerCase()
       .match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
   },
 
   countryCompareContinent(country) {
-    var val = "";
+    var val = '';
 
     switch (country) {
-      case "United States":
-        val = "Amerika Utara";
+      case 'United States':
+        val = 'Amerika Utara';
         break;
-      case "Japan":
-        val = "Asia";
+      case 'Japan':
+        val = 'Asia';
         break;
     }
 
@@ -63,7 +55,7 @@ module.exports = {
   },
 
   getInitials(string) {
-    var names = string.split(" "),
+    var names = string.split(' '),
       initials = names[0].substring(0, 1).toUpperCase();
 
     if (names.length > 1) {
@@ -73,52 +65,52 @@ module.exports = {
   },
 
   time: (date) => {
-    return moment(date).format("HH:mm");
+    return moment(date).format('HH:mm');
   },
 
   formatTime: (date) => {
-    return moment(date).format("HH:mm");
+    return moment(date).format('HH:mm');
   },
 
   fday: (date) => {
-    return moment(date).format("dddd");
+    return moment(date).format('dddd');
   },
 
   fdate: (date) => {
-    return moment(date).format("dddd, DD MMM YYYY HH:mm");
+    return moment(date).format('dddd, DD MMM YYYY HH:mm');
   },
 
   formatDateWithHourMinute: (date) => {
-    return moment(date).format("DD MMM YYYY");
+    return moment(date).format('DD MMM YYYY');
   },
 
   formatDate: (date) => {
-    return moment(date).format("YYYY/MM/DD");
+    return moment(date).format('YYYY-MM-DD');
   },
 
   formatDateWithSos: (date) => {
-    return moment(date).format("yyyy-MM-DD");
+    return moment(date).format('yyyy-MM-DD');
   },
 
   formatDate: (date) => {
-    return moment(date).format("YYYY-MM-DD HH:mm:ss");
+    return moment(date).format('YYYY-MM-DD');
   },
 
   formatDateByName: (date) => {
-    return moment(date).tz("Asia/Jakarta").format("DD MMM YYYY");
+    return moment(date).tz('Asia/Jakarta').format('DD MMM YYYY');
   },
 
   convertRp: (val) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
       minimumFractionDigits: 0,
     }).format(val);
   },
 
   makeid: (val) => {
-    var result = "";
-    var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    var result = '';
+    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     var charactersLength = characters.length;
     for (var i = 0; i < val; i++) {
       result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -130,8 +122,12 @@ module.exports = {
     return String(email)
       .toLowerCase()
       .match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
+  },
+
+  removeTimezone: (date) => {
+    return date.slice(0, 10);
   },
 
   encryptPassword: async (password) => {
@@ -151,10 +147,10 @@ module.exports = {
 
   sendEmail: async (email, otp) => {
     try {
-      await axios.post("https://api-email.inovatiftujuh8.com/api/v1/email", {
+      await axios.post('https://api-email.inovatiftujuh8.com/api/v1/email', {
         to: email,
-        app: "Raksha",
-        subject: "Raksha",
+        app: 'Raksha',
+        subject: 'Raksha',
         body:
           `<div style="font-family: Helvetica,Arial,sans-serif;min-width:1000px;overflow:auto;line-height:2"><div style="margin:50px auto; width:70%; padding: 20px 0;"><p style="font-size:1.1em;">Hi,</p><p>Use the following OTP to complete your Sign Up procedures. OTP is valid for 2 minutes</p><h2 style="background: #00466a; margin: 0 auto; width: max-content; padding: 0 10px; color: #fff; border-radius: 4px;">` +
           otp +
@@ -166,9 +162,8 @@ module.exports = {
   },
 
   generateId(length) {
-    var result = "";
-    var characters =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    var result = '';
+    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     var charactersLength = characters.length;
     for (var i = 0; i < length; i++) {
       result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -178,20 +173,17 @@ module.exports = {
 
   sendFCM: async (title, body, token, type, data) => {
     try {
-      await axios.post(
-        "https://api-fcm-office.inovatiftujuh8.com/api/v1/firebase/fcm",
-        {
-          token: token,
-          title: title,
-          body: body,
-          broadcast_type: type,
-          message: data.message,
-          news_id: data.news_id,
-          chat_id: data.chat_id,
-          sos_id: data.sos_id,
-          recipient_id: data.recipient_id,
-        }
-      );
+      await axios.post('https://api-fcm-office.inovatiftujuh8.com/api/v1/firebase/fcm', {
+        token: token,
+        title: title,
+        body: body,
+        broadcast_type: type,
+        message: data.message,
+        news_id: data.news_id,
+        chat_id: data.chat_id,
+        sos_id: data.sos_id,
+        recipient_id: data.recipient_id,
+      });
     } catch (e) {
       console.log(e);
     }
@@ -202,7 +194,7 @@ module.exports = {
       return text;
     }
 
-    return text.substring(0, length) + "...";
+    return text.substring(0, length) + '...';
   },
 
   hasDatePassed(date) {
@@ -216,21 +208,21 @@ module.exports = {
 
   logger: () => {
     return createLogger({
-      format: combine(label({ label: "" }), timestamp(), customFormat),
+      format: combine(label({ label: '' }), timestamp(), customFormat),
       transports: [new transports.File(options.file)],
     });
   },
 
   logInfo: (val) => {
     return createLogger({
-      format: combine(label({ label: "LOG" }), timestamp(), customFormat),
+      format: combine(label({ label: 'LOG' }), timestamp(), customFormat),
       transports: [new transports.File(options.file)],
     }).info(JSON.stringify(val));
   },
 
   reverseString(str) {
     // Step 1. Use the split() method to return a new array
-    var splitString = str.split(""); // var splitString = "hello".split("");
+    var splitString = str.split(''); // var splitString = "hello".split("");
     // ["h", "e", "l", "l", "o"]
 
     // Step 2. Use the reverse() method to reverse the new created array
@@ -238,7 +230,7 @@ module.exports = {
     // ["o", "l", "l", "e", "h"]
 
     // Step 3. Use the join() method to join all elements of the array into a string
-    var joinArray = reverseArray.join(""); // var joinArray = ["o", "l", "l", "e", "h"].join("");
+    var joinArray = reverseArray.join(''); // var joinArray = ["o", "l", "l", "e", "h"].join("");
     // "olleh"
 
     //Step 4. Return the reversed string
