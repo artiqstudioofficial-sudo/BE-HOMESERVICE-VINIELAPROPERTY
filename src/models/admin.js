@@ -1,4 +1,4 @@
-const conn = require('../configs/db');
+const conn = require("../configs/db");
 
 module.exports = {
   userManagementList: () => {
@@ -100,15 +100,57 @@ module.exports = {
 
   serviceStore: (data) => {
     return new Promise((resolve, reject) => {
-      const query = `INSERT INTO (name, price, unit_price) VALUES (?, ?, ?)`;
+      const query = `INSERT INTO services (name, price, unit_price, service_category, duration_minute, duration_hour, is_guarantee) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
-      conn.query(query, (err, result) => {
-        if (err) {
-          return reject(err);
+      conn.query(
+        query,
+        [
+          data.name,
+          data.price,
+          data.unit_price,
+          data.service_category,
+          data.duration_minute,
+          data.duration_hour,
+          data.is_guarantee,
+        ],
+        (err, result) => {
+          if (err) {
+            return reject(err);
+          }
+
+          resolve(result);
         }
+      );
+    });
+  },
 
-        resolve(result);
-      });
+  serviceUpdate: (data) => {
+    return new Promise((resolve, reject) => {
+      const query = `UPDATE services SET name = ?, price = ?, unit_price = ?, service_category = ?, 
+      duration_minute = ?, duration_hour = ?, is_guarantee = ?
+      WHERE id = ?`;
+
+      conn.query(
+        query,
+        [
+          data.name,
+          data.price,
+          data.unit_price,
+          data.service_category,
+          data.duration_minute,
+          data.duration_hour,
+          data.is_guarantee,
+          data.id,
+        ],
+        (err, result) => {
+          if (err) {
+            return reject(err);
+          }
+
+          resolve(result);
+        }
+      );
     });
   },
 
@@ -147,13 +189,37 @@ module.exports = {
       VALUES (?, ?, ?)
     `;
 
-      conn.query(query, [data.fullname, data.username, data.password], (err, result) => {
-        if (err) {
-          return reject(err);
-        }
+      conn.query(
+        query,
+        [data.fullname, data.username, data.password],
+        (err, result) => {
+          if (err) {
+            return reject(err);
+          }
 
-        resolve(result.insertId);
-      });
+          resolve(result.insertId);
+        }
+      );
+    });
+  },
+
+  userManagementUpdate: (data) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        UPDATE users SET fullname = ?, username = ?, password = ? WHERE id = ?
+    `;
+
+      conn.query(
+        query,
+        [data.fullname, data.username, data.password, data.id],
+        (err, result) => {
+          if (err) {
+            return reject(err);
+          }
+
+          resolve(result.insertId);
+        }
+      );
     });
   },
 
@@ -161,6 +227,20 @@ module.exports = {
     return new Promise((resolve, reject) => {
       var query = `INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)`;
       conn.query(query, [data.user_id, data.role_id], (e, result) => {
+        if (e) {
+          reject(new Error(e));
+        }
+
+        resolve(result);
+      });
+    });
+  },
+
+  userRoleUpdate: (data) => {
+    return new Promise((resolve, reject) => {
+      var query = `UPDATE user_roles SET role_id = ? 
+      WHERE user_id = ?`;
+      conn.query(query, [data.role_id, data.user_id], (e, result) => {
         if (e) {
           reject(new Error(e));
         }
