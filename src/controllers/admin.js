@@ -1,23 +1,99 @@
-const misc = require("../helpers/response");
-const { encryptPassword } = require("../helpers/utils");
-const Admin = require("../models/admin");
-const Applicant = require("../models/applicant");
+const misc = require('../helpers/response');
+const { encryptPassword } = require('../helpers/utils');
+const Admin = require('../models/admin');
+const Applicant = require('../models/applicant');
+const Role = require('../models/role');
 
 module.exports = {
-  storeUser: async (req, res) => {
-    const { fullname, username, password, position } = req.body;
+  userManagementList: async (_, res) => {
+    try {
+      const users = await Admin.userManagementList();
+
+      misc.response(res, 200, false, 'User management list successfully', users);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  userBookingList: async (_, res) => {
+    try {
+      const users = await Admin.userBookingList();
+
+      misc.response(res, 200, false, 'User booking list successfully', users);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  userRoleList: async (_, res) => {
+    try {
+      const roles = await Role.list();
+
+      misc.response(res, 200, false, 'User role list successfully', roles);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  serviceList: async (_, res) => {
+    try {
+      const services = await Admin.serviceList();
+      misc.response(res, 200, false, 'Service list successfully', services);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  serviceStore: async (req, res) => {
+    try {
+      const services = await Admin.serviceStore();
+
+      misc.response(res, 200, false, 'Service list successfully', services);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  userManagementStore: async (req, res) => {
+    const { fullname, username, password, role_id } = req.body;
 
     try {
       var data = {
-        fullname,
-        username,
+        fullname: fullname,
+        username: username,
         password: await encryptPassword(password),
-        position,
+        role_id: role_id,
       };
 
-      await Admin.storeUser(data);
+      const userId = await Admin.userManagementStore(data);
 
-      misc.response(res, 200, false, "User created successfully");
+      data.user_id = userId;
+
+      await Admin.userRoleStore(data);
+
+      misc.response(res, 200, false, 'User management store successfully');
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  updateBookingStatus: async (req, res) => {
+    try {
+      var data = {
+        form_id: req.body.form_id,
+        user_id: req.body.user_id,
+        status: req.body.status,
+      };
+      await Admin.updateBookingStatus(data);
+      await Admin.updateBookingTechnician(data);
+
+      misc.response(res, 200, false, 'Update booking status successfully');
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -34,15 +110,7 @@ module.exports = {
 
       var schedules = await Applicant.getTechSchedule(data);
 
-      console.log(schedules);
-
-      misc.response(
-        res,
-        200,
-        false,
-        "List tech schedule successfully",
-        schedules
-      );
+      misc.response(res, 200, false, 'List tech schedule successfully', schedules);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
