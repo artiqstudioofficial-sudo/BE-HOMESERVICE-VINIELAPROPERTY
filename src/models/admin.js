@@ -1,4 +1,4 @@
-const conn = require("../configs/db");
+const conn = require('../configs/db');
 
 module.exports = {
   userManagementList: () => {
@@ -98,6 +98,20 @@ module.exports = {
     });
   },
 
+  serviceCategoryList: () => {
+    return new Promise((resolve, reject) => {
+      const query = `SELECT sc.id, sc.name FROM service_categories sc`;
+
+      conn.query(query, (err, result) => {
+        if (err) {
+          return reject(err);
+        }
+
+        resolve(result);
+      });
+    });
+  },
+
   serviceStore: (data) => {
     return new Promise((resolve, reject) => {
       const query = `INSERT INTO services (name, price, unit_price, service_category, duration_minute, duration_hour, is_guarantee) 
@@ -120,7 +134,7 @@ module.exports = {
           }
 
           resolve(result);
-        }
+        },
       );
     });
   },
@@ -149,7 +163,7 @@ module.exports = {
           }
 
           resolve(result);
-        }
+        },
       );
     });
   },
@@ -189,17 +203,13 @@ module.exports = {
       VALUES (?, ?, ?)
     `;
 
-      conn.query(
-        query,
-        [data.fullname, data.username, data.password],
-        (err, result) => {
-          if (err) {
-            return reject(err);
-          }
-
-          resolve(result.insertId);
+      conn.query(query, [data.fullname, data.username, data.password], (err, result) => {
+        if (err) {
+          return reject(err);
         }
-      );
+
+        resolve(result.insertId);
+      });
     });
   },
 
@@ -209,17 +219,13 @@ module.exports = {
         UPDATE users SET fullname = ?, username = ?, password = ? WHERE id = ?
     `;
 
-      conn.query(
-        query,
-        [data.fullname, data.username, data.password, data.id],
-        (err, result) => {
-          if (err) {
-            return reject(err);
-          }
-
-          resolve(result.insertId);
+      conn.query(query, [data.fullname, data.username, data.password, data.id], (err, result) => {
+        if (err) {
+          return reject(err);
         }
-      );
+
+        resolve(result.insertId);
+      });
     });
   },
 
