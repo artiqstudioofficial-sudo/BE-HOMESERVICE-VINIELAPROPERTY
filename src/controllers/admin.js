@@ -50,7 +50,7 @@ module.exports = {
 
   serviceCategoryList: async (_, res) => {
     try {
-      const services = await Admin.serviceList();
+      const services = await Admin.serviceCategoryList();
       misc.response(res, 200, false, 'Service Category list successfully', services);
     } catch (e) {
       console.log(e);
