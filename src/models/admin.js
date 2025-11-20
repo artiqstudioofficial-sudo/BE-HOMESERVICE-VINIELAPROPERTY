@@ -1,26 +1,52 @@
-const conn = require('../configs/db');
+// repositories/admin.js (misal nama file ini)
+const { promisePool } = require("../configs/db");
+
+/**
+ * Helper query dengan retry sekali kalau kena error koneksi
+ */
+async function safeQuery(sql, params = [], retries = 1) {
+  try {
+    const [rows] = await promisePool.query(sql, params);
+    return rows;
+  } catch (err) {
+    if (
+      retries > 0 &&
+      (err.code === "ECONNRESET" || err.code === "PROTOCOL_CONNECTION_LOST")
+    ) {
+      console.warn("MySQL query error, retrying once:", err.code);
+      return safeQuery(sql, params, retries - 1);
+    }
+    throw err;
+  }
+}
 
 module.exports = {
-  userManagementList: () => {
-    return new Promise((resolve, reject) => {
-      var query = `SELECT u.id, u.fullname, u.username, r.name AS role, u.created_at 
+  // ---------------------------------------------------------------------------
+  // User Management List
+  // ---------------------------------------------------------------------------
+  userManagementList: async () => {
+    const sql = `
+      SELECT 
+        u.id, 
+        u.fullname, 
+        u.username, 
+        r.name AS role, 
+        u.created_at 
       FROM users u
       INNER JOIN user_roles ur 
-      ON u.id = ur.user_id
+        ON u.id = ur.user_id
       INNER JOIN roles r 
-      ON r.id = ur.role_id`;
-      conn.query(query, (e, result) => {
-        if (e) {
-          reject(new Error(e));
-        }
+        ON r.id = ur.role_id
+    `;
 
-        resolve(result);
-      });
-    });
+    return safeQuery(sql);
   },
-  userBookingList: () => {
-    return new Promise((resolve, reject) => {
-      const query = `
+
+  // ---------------------------------------------------------------------------
+  // User Booking List
+  // ---------------------------------------------------------------------------
+  userBookingList: async () => {
+    const sql = `
       SELECT 
         ats.id            AS apply_id,
         f.id              AS form_id,
@@ -32,9 +58,9 @@ module.exports = {
         u.created_at      AS user_created_at,
 
         f.fullname        AS customer_name,
-        f.whatsapp              AS customer_wa,
+        f.whatsapp        AS customer_wa,
         f.address,
-        s.name AS service,
+        s.name            AS service,
         f.schedule_date,
         f.schedule_time,
         fs.name           AS status,
@@ -45,7 +71,6 @@ module.exports = {
         f.after_photo,
         f.lat,
         f.lng
-
       FROM users u
       INNER JOIN user_roles ur 
         ON u.id = ur.user_id
@@ -63,18 +88,14 @@ module.exports = {
       ORDER BY f.schedule_date DESC, f.schedule_time ASC
     `;
 
-      conn.query(query, (e, result) => {
-        if (e) {
-          return reject(new Error(e));
-        }
-        resolve(result);
-      });
-    });
+    return safeQuery(sql);
   },
 
-  serviceList: () => {
-    return new Promise((resolve, reject) => {
-      const query = `
+  // ---------------------------------------------------------------------------
+  // Service List
+  // ---------------------------------------------------------------------------
+  serviceList: async () => {
+    const sql = `
       SELECT
         s.id,
         s.name,
@@ -88,171 +109,186 @@ module.exports = {
       ORDER BY sc.id, s.id
     `;
 
-      conn.query(query, (err, result) => {
-        if (err) {
-          return reject(err);
-        }
-
-        resolve(result);
-      });
-    });
+    return safeQuery(sql);
   },
 
-  serviceCategoryList: () => {
-    return new Promise((resolve, reject) => {
-      const query = `SELECT sc.id, sc.name FROM service_categories sc`;
+  // ---------------------------------------------------------------------------
+  // Service Category List
+  // ---------------------------------------------------------------------------
+  serviceCategoryList: async () => {
+    const sql = `
+      SELECT sc.id, sc.name 
+      FROM service_categories sc
+    `;
 
-      conn.query(query, (err, result) => {
-        if (err) {
-          return reject(err);
-        }
-
-        resolve(result);
-      });
-    });
+    return safeQuery(sql);
   },
 
-  serviceStore: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO services (name, price, unit_price, service_category, duration_minute, duration_hour, is_guarantee) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  // ---------------------------------------------------------------------------
+  // Service Store
+  // ---------------------------------------------------------------------------
+  serviceStore: async (data) => {
+    const sql = `
+      INSERT INTO services (
+        name, 
+        price, 
+        unit_price, 
+        service_category, 
+        duration_minute, 
+        duration_hour, 
+        is_guarantee
+      ) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
 
-      conn.query(
-        query,
-        [
-          data.name,
-          data.price,
-          data.unit_price,
-          data.service_category,
-          data.duration_minute,
-          data.duration_hour,
-          data.is_guarantee,
-        ],
-        (err, result) => {
-          if (err) {
-            return reject(err);
-          }
+    const params = [
+      data.name,
+      data.price,
+      data.unit_price,
+      data.service_category,
+      data.duration_minute,
+      data.duration_hour,
+      data.is_guarantee,
+    ];
 
-          resolve(result);
-        },
-      );
-    });
+    const result = await safeQuery(sql, params);
+    // result di sini adalah ResultSetHeader (mysql2) -> ada insertId
+    return result;
   },
 
-  serviceUpdate: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE services SET name = ?, price = ?, unit_price = ?, service_category = ?, 
-      duration_minute = ?, duration_hour = ?, is_guarantee = ?
-      WHERE id = ?`;
+  // ---------------------------------------------------------------------------
+  // Service Update
+  // ---------------------------------------------------------------------------
+  serviceUpdate: async (data) => {
+    const sql = `
+      UPDATE services 
+      SET 
+        name = ?, 
+        price = ?, 
+        unit_price = ?, 
+        service_category = ?, 
+        duration_minute = ?, 
+        duration_hour = ?, 
+        is_guarantee = ?
+      WHERE id = ?
+    `;
 
-      conn.query(
-        query,
-        [
-          data.name,
-          data.price,
-          data.unit_price,
-          data.service_category,
-          data.duration_minute,
-          data.duration_hour,
-          data.is_guarantee,
-          data.id,
-        ],
-        (err, result) => {
-          if (err) {
-            return reject(err);
-          }
+    const params = [
+      data.name,
+      data.price,
+      data.unit_price,
+      data.service_category,
+      data.duration_minute,
+      data.duration_hour,
+      data.is_guarantee,
+      data.id,
+    ];
 
-          resolve(result);
-        },
-      );
-    });
+    const result = await safeQuery(sql, params);
+    return result;
   },
 
-  updateBookingStatus: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE forms SET status = ? WHERE id = ?`;
+  // ---------------------------------------------------------------------------
+  // Service Delete
+  // ---------------------------------------------------------------------------
+  serviceDelete: async (data) => {
+    const sql = `
+      DELETE FROM services 
+      WHERE id = ?
+    `;
 
-      conn.query(query, [data.status, data.form_id], (err, result) => {
-        if (err) {
-          return reject(err);
-        }
-
-        resolve(result);
-      });
-    });
+    const result = await safeQuery(sql, [data.id]);
+    return result;
   },
 
-  updateBookingTechnician: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE apply_technicians SET user_id = ? WHERE form_id = ?`;
+  // ---------------------------------------------------------------------------
+  // Update Booking Status
+  // ---------------------------------------------------------------------------
+  updateBookingStatus: async (data) => {
+    const sql = `
+      UPDATE forms 
+      SET status = ? 
+      WHERE id = ?
+    `;
 
-      conn.query(query, [data.user_id, data.form_id], (err, result) => {
-        if (err) {
-          return reject(err);
-        }
-
-        resolve(result);
-      });
-    });
+    const result = await safeQuery(sql, [data.status, data.form_id]);
+    return result;
   },
 
-  userManagementStore: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-      INSERT INTO users (fullname, username, password)
+  // ---------------------------------------------------------------------------
+  // Update Booking Technician
+  // ---------------------------------------------------------------------------
+  updateBookingTechnician: async (data) => {
+    const sql = `
+      UPDATE apply_technicians 
+      SET user_id = ? 
+      WHERE form_id = ?
+    `;
+
+    const result = await safeQuery(sql, [data.user_id, data.form_id]);
+    return result;
+  },
+
+  // ---------------------------------------------------------------------------
+  // User Management Store
+  // ---------------------------------------------------------------------------
+  userManagementStore: async (data) => {
+    const sql = `
+      INSERT INTO users (
+        fullname, 
+        username, 
+        password
+      )
       VALUES (?, ?, ?)
     `;
 
-      conn.query(query, [data.fullname, data.username, data.password], (err, result) => {
-        if (err) {
-          return reject(err);
-        }
-
-        resolve(result.insertId);
-      });
-    });
+    const params = [data.fullname, data.username, data.password];
+    const result = await safeQuery(sql, params);
+    // result.insertId tersedia di sini
+    return result.insertId;
   },
 
-  userManagementUpdate: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        UPDATE users SET fullname = ?, username = ?, password = ? WHERE id = ?
+  // ---------------------------------------------------------------------------
+  // User Management Update
+  // ---------------------------------------------------------------------------
+  userManagementUpdate: async (data) => {
+    const sql = `
+      UPDATE users 
+      SET fullname = ?, username = ?, password = ? 
+      WHERE id = ?
     `;
 
-      conn.query(query, [data.fullname, data.username, data.password, data.id], (err, result) => {
-        if (err) {
-          return reject(err);
-        }
+    const params = [data.fullname, data.username, data.password, data.id];
 
-        resolve(result.insertId);
-      });
-    });
+    const result = await safeQuery(sql, params);
+    // UPDATE tidak punya insertId; biasanya pakai affectedRows
+    return result;
   },
 
-  userRoleStore: (data) => {
-    return new Promise((resolve, reject) => {
-      var query = `INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)`;
-      conn.query(query, [data.user_id, data.role_id], (e, result) => {
-        if (e) {
-          reject(new Error(e));
-        }
+  // ---------------------------------------------------------------------------
+  // User Role Store
+  // ---------------------------------------------------------------------------
+  userRoleStore: async (data) => {
+    const sql = `
+      INSERT INTO user_roles (user_id, role_id) 
+      VALUES (?, ?)
+    `;
 
-        resolve(result);
-      });
-    });
+    const result = await safeQuery(sql, [data.user_id, data.role_id]);
+    return result;
   },
 
-  userRoleUpdate: (data) => {
-    return new Promise((resolve, reject) => {
-      var query = `UPDATE user_roles SET role_id = ? 
-      WHERE user_id = ?`;
-      conn.query(query, [data.role_id, data.user_id], (e, result) => {
-        if (e) {
-          reject(new Error(e));
-        }
+  // ---------------------------------------------------------------------------
+  // User Role Update
+  // ---------------------------------------------------------------------------
+  userRoleUpdate: async (data) => {
+    const sql = `
+      UPDATE user_roles 
+      SET role_id = ? 
+      WHERE user_id = ?
+    `;
 
-        resolve(result);
-      });
-    });
+    const result = await safeQuery(sql, [data.role_id, data.user_id]);
+    return result;
   },
 };

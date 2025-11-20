@@ -1,15 +1,21 @@
-const misc = require('../helpers/response');
-const { encryptPassword } = require('../helpers/utils');
-const Admin = require('../models/admin');
-const Applicant = require('../models/applicant');
-const Role = require('../models/role');
+const misc = require("../helpers/response");
+const { encryptPassword } = require("../helpers/utils");
+const Admin = require("../models/admin");
+const Applicant = require("../models/applicant");
+const Role = require("../models/role");
 
 module.exports = {
   userManagementList: async (_, res) => {
     try {
       const users = await Admin.userManagementList();
 
-      misc.response(res, 200, false, 'User management list successfully', users);
+      misc.response(
+        res,
+        200,
+        false,
+        "User management list successfully",
+        users
+      );
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -20,7 +26,7 @@ module.exports = {
     try {
       const users = await Admin.userBookingList();
 
-      misc.response(res, 200, false, 'User booking list successfully', users);
+      misc.response(res, 200, false, "User booking list successfully", users);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -31,7 +37,7 @@ module.exports = {
     try {
       const roles = await Role.list();
 
-      misc.response(res, 200, false, 'User role list successfully', roles);
+      misc.response(res, 200, false, "User role list successfully", roles);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -41,7 +47,7 @@ module.exports = {
   serviceList: async (_, res) => {
     try {
       const services = await Admin.serviceList();
-      misc.response(res, 200, false, 'Service list successfully', services);
+      misc.response(res, 200, false, "Service list successfully", services);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -51,7 +57,13 @@ module.exports = {
   serviceCategoryList: async (_, res) => {
     try {
       const services = await Admin.serviceCategoryList();
-      misc.response(res, 200, false, 'Service Category list successfully', services);
+      misc.response(
+        res,
+        200,
+        false,
+        "Service Category list successfully",
+        services
+      );
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -80,7 +92,7 @@ module.exports = {
       };
       const services = await Admin.serviceStore(data);
 
-      misc.response(res, 200, false, 'Service list successfully', services);
+      misc.response(res, 200, false, "Service list successfully", services);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -111,7 +123,24 @@ module.exports = {
       };
       const services = await Admin.serviceUpdate(data);
 
-      misc.response(res, 200, false, 'Service list successfully', services);
+      misc.response(res, 200, false, "Service list successfully", services);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  serviceDelete: async (req, res) => {
+    const { id } = req.body;
+
+    try {
+      var data = {
+        id: id,
+      };
+
+      await Admin.serviceDelete(data);
+
+      misc.response(res, 200, false, "Service delete successfully");
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -135,7 +164,7 @@ module.exports = {
 
       await Admin.userRoleStore(data);
 
-      misc.response(res, 200, false, 'User management store successfully');
+      misc.response(res, 200, false, "User management store successfully");
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -157,7 +186,7 @@ module.exports = {
       await Admin.userManagementUpdate(data);
       await Admin.userRoleUpdate(data);
 
-      misc.response(res, 200, false, 'User management store successfully');
+      misc.response(res, 200, false, "User management store successfully");
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -174,7 +203,7 @@ module.exports = {
       await Admin.updateBookingStatus(data);
       await Admin.updateBookingTechnician(data);
 
-      misc.response(res, 200, false, 'Update booking status successfully');
+      misc.response(res, 200, false, "Update booking status successfully");
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -191,7 +220,13 @@ module.exports = {
 
       var schedules = await Applicant.getTechSchedule(data);
 
-      misc.response(res, 200, false, 'List tech schedule successfully', schedules);
+      misc.response(
+        res,
+        200,
+        false,
+        "List tech schedule successfully",
+        schedules
+      );
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
