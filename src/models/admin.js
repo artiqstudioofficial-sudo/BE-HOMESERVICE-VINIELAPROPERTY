@@ -152,7 +152,6 @@ module.exports = {
     ];
 
     const result = await safeQuery(sql, params);
-    // result di sini adalah ResultSetHeader (mysql2) -> ada insertId
     return result;
   },
 
