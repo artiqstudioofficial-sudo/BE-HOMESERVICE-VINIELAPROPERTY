@@ -1,5 +1,6 @@
 // repositories/admin.js (misal nama file ini)
-const { promisePool } = require("../configs/db");
+const { promisePool } = require('../configs/db');
+const { storeBooking } = require('../controllers/admin');
 
 /**
  * Helper query dengan retry sekali kalau kena error koneksi
@@ -9,11 +10,8 @@ async function safeQuery(sql, params = [], retries = 1) {
     const [rows] = await promisePool.query(sql, params);
     return rows;
   } catch (err) {
-    if (
-      retries > 0 &&
-      (err.code === "ECONNRESET" || err.code === "PROTOCOL_CONNECTION_LOST")
-    ) {
-      console.warn("MySQL query error, retrying once:", err.code);
+    if (retries > 0 && (err.code === 'ECONNRESET' || err.code === 'PROTOCOL_CONNECTION_LOST')) {
+      console.warn('MySQL query error, retrying once:', err.code);
       return safeQuery(sql, params, retries - 1);
     }
     throw err;
@@ -199,6 +197,43 @@ module.exports = {
     const result = await safeQuery(sql, [data.id]);
     return result;
   },
+  // ---------------------------------------------------------------------------
+  // Store Booking
+  // ----------------------------------------------------------------------------
+
+  storeBooking: async (data) => {
+    const sql = `
+      INSERT INTO forms (
+        fullname,
+        whatsapp,
+        address,
+        lat,
+        lng,
+        service,
+        status,
+        schedule_date,
+        schedule_time
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const params = [
+      data.fullname, // nama customer
+      data.whatsapp, // nomor WA
+      data.address, // alamat
+      data.lat, // latitude
+      data.lng, // longitude
+      data.service, // service ID (FK ke tabel services)
+      data.status, // status ID (FK ke form_statuses)
+      data.schedule_date, // 'YYYY-MM-DD'
+      data.schedule_time, // 'HH:mm'
+    ];
+
+    const result = await safeQuery(sql, params);
+
+    // MySQL OkPacket → ada insertId
+    return result.insertId; // kembalikan ID forms yang baru dibuat
+  },
 
   // ---------------------------------------------------------------------------
   // Update Booking Status
@@ -211,6 +246,18 @@ module.exports = {
     `;
 
     const result = await safeQuery(sql, [data.status, data.form_id]);
+    return result;
+  },
+
+  // ---------------------------------------------------------------------------
+  // Store Booking Technician
+  // ---------------------------------------------------------------------------
+  storeBookingTechnician: async (data) => {
+    const sql = `
+      INSERT INTO apply_technicians (user_id, form_id) VALUES (?, ?)
+    `;
+
+    const result = await safeQuery(sql, [data.user_id, data.form_id]);
     return result;
   },
 
