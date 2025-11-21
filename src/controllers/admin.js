@@ -159,28 +159,6 @@ module.exports = {
     }
   },
 
-  userManagementUpdate: async (req, res) => {
-    const { id, fullname, username, password, role_id } = req.body;
-
-    try {
-      var data = {
-        id: id,
-        fullname: fullname,
-        username: username,
-        password: await encryptPassword(password),
-        role_id: role_id,
-      };
-
-      await Admin.userManagementUpdate(data);
-      await Admin.userRoleUpdate(data);
-
-      misc.response(res, 200, false, 'User management store successfully');
-    } catch (e) {
-      console.log(e);
-      misc.response(res, 400, true, e.message);
-    }
-  },
-
   storeBooking: async (req, res) => {
     const {
       fullname,
@@ -216,12 +194,34 @@ module.exports = {
 
       await Admin.storeBookingTechnician(data);
 
-      return misc.response(res, 201, false, 'Booking berhasil dibuat', {
+      return misc.response(res, 201, false, 'Booking created successfully', {
         form_id: formId,
       });
     } catch (e) {
       console.log(e);
       return misc.response(res, 400, true, e.message);
+    }
+  },
+
+  userManagementUpdate: async (req, res) => {
+    const { id, fullname, username, password, role_id } = req.body;
+
+    try {
+      var data = {
+        id: id,
+        fullname: fullname,
+        username: username,
+        password: await encryptPassword(password),
+        role_id: role_id,
+      };
+
+      await Admin.userManagementUpdate(data);
+      await Admin.userRoleUpdate(data);
+
+      misc.response(res, 200, false, 'User management store successfully');
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
     }
   },
 

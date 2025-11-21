@@ -46,44 +46,47 @@ module.exports = {
   userBookingList: async () => {
     const sql = `
       SELECT 
-        ats.id            AS apply_id,
-        f.id              AS form_id,
+      ats.id            AS apply_id,
+      f.id              AS form_id,
 
-        u.id              AS technician_id,
-        u.fullname        AS technician_name,
-        u.username        AS technician_username,
-        r.name            AS role,
-        u.created_at      AS user_created_at,
+      u.id              AS technician_id,
+      u.fullname        AS technician_name,
+      u.username        AS technician_username,
+      r.name            AS role,
+      u.created_at      AS user_created_at,
 
-        f.fullname        AS customer_name,
-        f.whatsapp        AS customer_wa,
-        f.address,
-        s.name            AS service,
-        f.schedule_date,
-        f.schedule_time,
-        fs.name           AS status,
-        f.note,
-        f.additional_cost,
-        f.arrive_photo,
-        f.before_photo,
-        f.after_photo,
-        f.lat,
-        f.lng
-      FROM users u
-      INNER JOIN user_roles ur 
-        ON u.id = ur.user_id
-      INNER JOIN roles r 
-        ON r.id = ur.role_id
-      INNER JOIN apply_technicians ats 
-        ON ats.user_id = u.id
-      INNER JOIN forms f 
-        ON f.id = ats.form_id
-      INNER JOIN form_statuses fs 
-        ON fs.id = f.status
-      INNER JOIN services s
-        ON s.id = f.service
-      WHERE r.name = 'technician'
-      ORDER BY f.schedule_date DESC, f.schedule_time ASC
+      f.fullname        AS customer_name,
+      f.whatsapp        AS customer_wa,
+      f.address,
+      s.name            AS service,
+      f.schedule_date,
+      f.schedule_time,
+      fs.name           AS status,
+      f.note,
+      f.additional_cost,
+      f.arrive_photo,
+      f.before_photo,
+      f.after_photo,
+      f.lat,
+      f.lng
+    FROM forms f
+    -- relasi form ke teknisi (boleh null)
+    LEFT JOIN apply_technicians ats 
+      ON ats.form_id = f.id
+    LEFT JOIN users u 
+      ON u.id = ats.user_id
+    LEFT JOIN user_roles ur 
+      ON ur.user_id = u.id
+    LEFT JOIN roles r 
+      ON r.id = ur.role_id
+      AND r.name = 'technician'  -- filter role di ON, bukan di WHERE
+
+    INNER JOIN form_statuses fs 
+      ON fs.id = f.status
+    INNER JOIN services s
+      ON s.id = f.service
+
+    ORDER BY f.schedule_date DESC, f.schedule_time ASC
     `;
 
     return safeQuery(sql);
