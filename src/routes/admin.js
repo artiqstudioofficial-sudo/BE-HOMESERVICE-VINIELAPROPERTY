@@ -5,6 +5,7 @@ const admin = require('../controllers/admin');
 // USER MANAGEMENT
 Route.post('/user-management-store', admin.userManagementStore);
 Route.put('/user-management-update', admin.userManagementUpdate);
+Route.delete('/user-management-delete', admin.userManagementDelete);
 Route.get('/user-management-list', admin.userManagementList);
 
 // USER ROLE

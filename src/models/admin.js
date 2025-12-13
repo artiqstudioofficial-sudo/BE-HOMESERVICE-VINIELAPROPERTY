@@ -315,6 +315,18 @@ module.exports = {
   },
 
   // ---------------------------------------------------------------------------
+  // User Management Delete
+  // ---------------------------------------------------------------------------
+  userManagementDelete: async (data) => {
+    const sql = `DELETE FROM users WHERE id = ?`;
+
+    const params = [data.id];
+
+    const result = await safeQuery(sql, params);
+    return result;
+  },
+
+  // ---------------------------------------------------------------------------
   // User Role Store
   // ---------------------------------------------------------------------------
   userRoleStore: async (data) => {

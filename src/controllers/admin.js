@@ -225,6 +225,23 @@ module.exports = {
     }
   },
 
+  userManagementDelete: async (req, res) => {
+    const { id } = req.body;
+
+    try {
+      var data = {
+        id: id,
+      };
+
+      await Admin.userManagementDelete(data);
+
+      misc.response(res, 200, false, 'User management delete successfully');
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
   updateBookingStatus: async (req, res) => {
     try {
       var data = {
