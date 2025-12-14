@@ -23,7 +23,7 @@ const corsOptions = {
     // allow request tanpa origin (curl/postman/server-to-server)
     if (!origin) return cb(null, true);
 
-    const allowed = ['homeservice.viniela.id'];
+    const allowed = ['https://homeservice.viniela.id'];
     return allowed.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'));
   },
   credentials: true,
