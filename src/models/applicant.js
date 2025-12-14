@@ -131,8 +131,7 @@ module.exports = {
     const sql = `
       SELECT 
         u.fullname, 
-        u.username, 
-        u.position 
+        u.username
       FROM users u
       INNER JOIN apply_technicians at 
         ON at.user_id = u.id
