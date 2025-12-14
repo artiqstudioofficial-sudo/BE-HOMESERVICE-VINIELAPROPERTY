@@ -5,6 +5,7 @@ const fileUpload = require('express-fileupload');
 const compression = require('compression');
 const cors = require('cors');
 const helmet = require('helmet');
+const session = require('express-session');
 
 const app = express();
 
@@ -33,10 +34,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Preflight handler (wajib untuk mencegah preflight nyangkut)
 app.options(/.*/, cors(corsOptions));
 
-// Kalau pakai cookies di localhost, ini kadang diperlukan:
 app.set('trust proxy', 1);
 
 app.use(
@@ -45,15 +44,34 @@ app.use(
   }),
 );
 
-// Body parsers sebaiknya sebelum fileUpload kalau kamu upload via multipart
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// =======================
+// SESSION
+// =======================
+const isProd = process.env.NODE_ENV === 'production';
+
+app.use(
+  session({
+    name: 'connect.sid',
+    secret: process.env.SESSION_SECRET || 'dev-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    },
+  }),
+);
 
 app.use(
   fileUpload({
     useTempFiles: false,
     createParentPath: true,
-    limits: { fileSize: 50 * 1024 * 1024 }, // optional
+    limits: { fileSize: 50 * 1024 * 1024 },
   }),
 );
 

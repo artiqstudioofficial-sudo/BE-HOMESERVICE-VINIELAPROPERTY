@@ -1,5 +1,5 @@
-const { promisePool } = require("../configs/db");
-const { removeTimezone, formatDate } = require("../helpers/utils");
+const { promisePool } = require('../configs/db');
+const { removeTimezone, formatDate } = require('../helpers/utils');
 
 /**
  * Helper query dengan retry 1x kalau kena error koneksi
@@ -9,11 +9,8 @@ async function safeQuery(sql, params = [], retries = 1) {
     const [rows] = await promisePool.query(sql, params);
     return rows;
   } catch (err) {
-    if (
-      retries > 0 &&
-      (err.code === "ECONNRESET" || err.code === "PROTOCOL_CONNECTION_LOST")
-    ) {
-      console.warn("MySQL query error, retrying once:", err.code);
+    if (retries > 0 && (err.code === 'ECONNRESET' || err.code === 'PROTOCOL_CONNECTION_LOST')) {
+      console.warn('MySQL query error, retrying once:', err.code);
       return safeQuery(sql, params, retries - 1);
     }
     throw err;
