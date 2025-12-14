@@ -277,10 +277,10 @@ module.exports = {
   // ---------------------------------------------------------------------------
   storeBookingTechnician: async (data) => {
     const sql = `
-      INSERT INTO apply_technicians (user_id, form_id) VALUES (?, ?)
+      INSERT INTO apply_technicians (form_id) VALUES (?)
     `;
 
-    const result = await safeQuery(sql, [data.user_id, data.form_id]);
+    const result = await safeQuery(sql, [data.form_id]);
     return result;
   },
 

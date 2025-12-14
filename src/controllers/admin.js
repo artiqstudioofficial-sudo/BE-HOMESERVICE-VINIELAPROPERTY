@@ -437,25 +437,14 @@ module.exports = {
   // BOOKING
   // ---------------------------------------------------------------------------
   storeBooking: async (req, res) => {
-    const {
-      fullname,
-      whatsapp,
-      service,
-      user_id,
-      status,
-      address,
-      lat,
-      lng,
-      schedule_date,
-      schedule_time,
-    } = req.body;
+    const { fullname, whatsapp, service, status, address, lat, lng, schedule_date, schedule_time } =
+      req.body;
 
     try {
       const data = {
         fullname,
         whatsapp,
         service,
-        user_id,
         status,
         address,
         lat,
@@ -467,7 +456,6 @@ module.exports = {
       const formId = await Admin.storeBooking(data);
 
       data.form_id = formId;
-      data.user_id = user_id;
 
       await Admin.storeBookingTechnician(data);
 
