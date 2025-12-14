@@ -453,11 +453,7 @@ module.exports = {
         schedule_time,
       };
 
-      const formId = await Admin.storeBooking(data);
-
-      data.form_id = formId;
-
-      await Admin.storeBookingTechnician(data);
+      await Admin.storeBooking(data);
 
       return misc.response(res, 201, false, 'Booking created successfully', {
         form_id: formId,

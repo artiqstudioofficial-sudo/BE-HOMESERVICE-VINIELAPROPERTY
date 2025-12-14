@@ -273,29 +273,25 @@ module.exports = {
   },
 
   // ---------------------------------------------------------------------------
-  // Store Booking Technician
-  // ---------------------------------------------------------------------------
-  storeBookingTechnician: async (data) => {
-    const sql = `
-      INSERT INTO apply_technicians (form_id) VALUES (?)
-    `;
-
-    const result = await safeQuery(sql, [data.form_id]);
-    return result;
-  },
-
-  // ---------------------------------------------------------------------------
   // Update Booking Technician
   // ---------------------------------------------------------------------------
   updateBookingTechnician: async (data) => {
-    const sql = `
-      UPDATE apply_technicians 
-      SET user_id = ? 
-      WHERE form_id = ?
-    `;
+    const updateSql = `
+    UPDATE apply_technicians
+    SET user_id = ?
+    WHERE form_id = ?
+  `;
+    const upd = await safeQuery(updateSql, [data.user_id, data.form_id]);
 
-    const result = await safeQuery(sql, [data.user_id, data.form_id]);
-    return result;
+    if (!upd || upd.affectedRows === 0) {
+      const insertSql = `
+      INSERT INTO apply_technicians (form_id, user_id)
+      VALUES (?, ?)
+    `;
+      return await safeQuery(insertSql, [data.form_id, data.user_id]);
+    }
+
+    return upd;
   },
 
   // ---------------------------------------------------------------------------
@@ -382,7 +378,6 @@ module.exports = {
     const rows = await safeQuery(sql);
 
     if (!rows || rows.length === 0) {
-      // fallback kalau row belum ada
       return {
         fully_booked_dates: [],
         booked_slots: [],
@@ -390,8 +385,6 @@ module.exports = {
       };
     }
 
-    // mysql2 biasanya sudah parse JSON jadi object/array,
-    // tapi kadang masih string → kita handle dua-duanya.
     const row = rows[0];
 
     const fullyBooked =
