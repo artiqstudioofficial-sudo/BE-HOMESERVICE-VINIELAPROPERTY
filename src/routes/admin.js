@@ -2,10 +2,26 @@ const express = require('express');
 const Route = express.Router();
 const admin = require('../controllers/admin');
 
+// =====================
+// AUTH
+// =====================
+Route.post('/login', admin.authLogin);
+Route.get('/me', admin.authMe);
+Route.post('/logout', admin.authLogout);
+
+// AVAILABILITY
+Route.get('/availability', admin.availabilityGet);
+Route.put('/availability', admin.availabilityUpdate);
+
 // USER MANAGEMENT
 Route.post('/user-management-store', admin.userManagementStore);
 Route.put('/user-management-update', admin.userManagementUpdate);
+Route.delete('/user-management-delete', admin.userManagementDelete);
 Route.get('/user-management-list', admin.userManagementList);
+
+// PHOTOS
+Route.post('/booking-photo-upload', admin.bookingPhotoUpload);
+Route.get('/booking-photo', admin.bookingPhotoGet);
 
 // USER ROLE
 Route.get('/user-role-list', admin.userRoleList);

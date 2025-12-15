@@ -1,6 +1,5 @@
-// repositories/admin.js (misal nama file ini)
+// repositories/admin.js
 const { promisePool } = require('../configs/db');
-const { storeBooking } = require('../controllers/admin');
 
 /**
  * Helper query dengan retry sekali kalau kena error koneksi
@@ -19,6 +18,29 @@ async function safeQuery(sql, params = [], retries = 1) {
 }
 
 module.exports = {
+  // ---------------------------------------------------------------------------
+  // AUTH: Find user for login (users + roles)
+  // ---------------------------------------------------------------------------
+  findUserForLogin: async (username) => {
+    const sql = `
+      SELECT
+        u.id,
+        u.fullname,
+        u.username,
+        u.password,
+        ur.role_id,
+        r.name AS role
+      FROM users u
+      LEFT JOIN user_roles ur ON ur.user_id = u.id
+      LEFT JOIN roles r ON r.id = ur.role_id
+      WHERE u.username = ?
+      LIMIT 1
+    `;
+
+    const rows = await safeQuery(sql, [username]);
+    return rows?.[0] || null;
+  },
+
   // ---------------------------------------------------------------------------
   // User Management List
   // ---------------------------------------------------------------------------
@@ -46,44 +68,47 @@ module.exports = {
   userBookingList: async () => {
     const sql = `
       SELECT 
-        ats.id            AS apply_id,
-        f.id              AS form_id,
+      ats.id            AS apply_id,
+      f.id              AS form_id,
 
-        u.id              AS technician_id,
-        u.fullname        AS technician_name,
-        u.username        AS technician_username,
-        r.name            AS role,
-        u.created_at      AS user_created_at,
+      u.id              AS technician_id,
+      u.fullname        AS technician_name,
+      u.username        AS technician_username,
+      r.name            AS role,
+      u.created_at      AS user_created_at,
 
-        f.fullname        AS customer_name,
-        f.whatsapp        AS customer_wa,
-        f.address,
-        s.name            AS service,
-        f.schedule_date,
-        f.schedule_time,
-        fs.name           AS status,
-        f.note,
-        f.additional_cost,
-        f.arrive_photo,
-        f.before_photo,
-        f.after_photo,
-        f.lat,
-        f.lng
-      FROM users u
-      INNER JOIN user_roles ur 
-        ON u.id = ur.user_id
-      INNER JOIN roles r 
-        ON r.id = ur.role_id
-      INNER JOIN apply_technicians ats 
-        ON ats.user_id = u.id
-      INNER JOIN forms f 
-        ON f.id = ats.form_id
-      INNER JOIN form_statuses fs 
-        ON fs.id = f.status
-      INNER JOIN services s
-        ON s.id = f.service
-      WHERE r.name = 'technician'
-      ORDER BY f.schedule_date DESC, f.schedule_time ASC
+      f.fullname        AS customer_name,
+      f.whatsapp        AS customer_wa,
+      f.address,
+      s.name            AS service,
+      f.schedule_date,
+      f.schedule_time,
+      fs.name           AS status,
+      f.note,
+      f.additional_cost,
+      f.arrive_photo,
+      f.before_photo,
+      f.after_photo,
+      f.lat,
+      f.lng
+    FROM forms f
+    -- relasi form ke teknisi (boleh null)
+    LEFT JOIN apply_technicians ats 
+      ON ats.form_id = f.id
+    LEFT JOIN users u 
+      ON u.id = ats.user_id
+    LEFT JOIN user_roles ur 
+      ON ur.user_id = u.id
+    LEFT JOIN roles r 
+      ON r.id = ur.role_id
+      AND r.name = 'technician'  -- filter role di ON, bukan di WHERE
+
+    INNER JOIN form_statuses fs 
+      ON fs.id = f.status
+    INNER JOIN services s
+      ON s.id = f.service
+
+    ORDER BY f.schedule_date DESC, f.schedule_time ASC
     `;
 
     return safeQuery(sql);
@@ -197,10 +222,10 @@ module.exports = {
     const result = await safeQuery(sql, [data.id]);
     return result;
   },
+
   // ---------------------------------------------------------------------------
   // Store Booking
   // ----------------------------------------------------------------------------
-
   storeBooking: async (data) => {
     const sql = `
       INSERT INTO forms (
@@ -218,21 +243,19 @@ module.exports = {
     `;
 
     const params = [
-      data.fullname, // nama customer
-      data.whatsapp, // nomor WA
-      data.address, // alamat
-      data.lat, // latitude
-      data.lng, // longitude
-      data.service, // service ID (FK ke tabel services)
-      data.status, // status ID (FK ke form_statuses)
-      data.schedule_date, // 'YYYY-MM-DD'
-      data.schedule_time, // 'HH:mm'
+      data.fullname,
+      data.whatsapp,
+      data.address,
+      data.lat,
+      data.lng,
+      data.service,
+      data.status,
+      data.schedule_date,
+      data.schedule_time,
     ];
 
     const result = await safeQuery(sql, params);
-
-    // MySQL OkPacket → ada insertId
-    return result.insertId; // kembalikan ID forms yang baru dibuat
+    return result.insertId;
   },
 
   // ---------------------------------------------------------------------------
@@ -250,29 +273,25 @@ module.exports = {
   },
 
   // ---------------------------------------------------------------------------
-  // Store Booking Technician
-  // ---------------------------------------------------------------------------
-  storeBookingTechnician: async (data) => {
-    const sql = `
-      INSERT INTO apply_technicians (user_id, form_id) VALUES (?, ?)
-    `;
-
-    const result = await safeQuery(sql, [data.user_id, data.form_id]);
-    return result;
-  },
-
-  // ---------------------------------------------------------------------------
   // Update Booking Technician
   // ---------------------------------------------------------------------------
   updateBookingTechnician: async (data) => {
-    const sql = `
-      UPDATE apply_technicians 
-      SET user_id = ? 
-      WHERE form_id = ?
-    `;
+    const updateSql = `
+    UPDATE apply_technicians
+    SET user_id = ?
+    WHERE form_id = ?
+  `;
+    const upd = await safeQuery(updateSql, [data.user_id, data.form_id]);
 
-    const result = await safeQuery(sql, [data.user_id, data.form_id]);
-    return result;
+    if (!upd || upd.affectedRows === 0) {
+      const insertSql = `
+      INSERT INTO apply_technicians (form_id, user_id)
+      VALUES (?, ?)
+    `;
+      return await safeQuery(insertSql, [data.form_id, data.user_id]);
+    }
+
+    return upd;
   },
 
   // ---------------------------------------------------------------------------
@@ -290,7 +309,6 @@ module.exports = {
 
     const params = [data.fullname, data.username, data.password];
     const result = await safeQuery(sql, params);
-    // result.insertId tersedia di sini
     return result.insertId;
   },
 
@@ -305,9 +323,17 @@ module.exports = {
     `;
 
     const params = [data.fullname, data.username, data.password, data.id];
-
     const result = await safeQuery(sql, params);
-    // UPDATE tidak punya insertId; biasanya pakai affectedRows
+    return result;
+  },
+
+  // ---------------------------------------------------------------------------
+  // User Management Delete
+  // ---------------------------------------------------------------------------
+  userManagementDelete: async (data) => {
+    const sql = `DELETE FROM users WHERE id = ?`;
+    const params = [data.id];
+    const result = await safeQuery(sql, params);
     return result;
   },
 
@@ -336,5 +362,83 @@ module.exports = {
 
     const result = await safeQuery(sql, [data.role_id, data.user_id]);
     return result;
+  },
+
+  getAvailability: async () => {
+    const sql = `
+      SELECT
+        fully_booked_dates,
+        booked_slots,
+        updated_at
+      FROM availability_settings
+      WHERE id = 1
+      LIMIT 1
+    `;
+
+    const rows = await safeQuery(sql);
+
+    if (!rows || rows.length === 0) {
+      return {
+        fully_booked_dates: [],
+        booked_slots: [],
+        updated_at: null,
+      };
+    }
+
+    const row = rows[0];
+
+    const fullyBooked =
+      typeof row.fully_booked_dates === 'string'
+        ? JSON.parse(row.fully_booked_dates || '[]')
+        : row.fully_booked_dates || [];
+
+    const bookedSlots =
+      typeof row.booked_slots === 'string'
+        ? JSON.parse(row.booked_slots || '[]')
+        : row.booked_slots || [];
+
+    return {
+      fully_booked_dates: Array.isArray(fullyBooked) ? fullyBooked : [],
+      booked_slots: Array.isArray(bookedSlots) ? bookedSlots : [],
+      updated_at: row.updated_at || null,
+    };
+  },
+
+  updateAvailability: async ({ fully_booked_dates, booked_slots }) => {
+    const sql = `
+      UPDATE availability_settings
+      SET fully_booked_dates = ?, booked_slots = ?
+      WHERE id = 1
+    `;
+
+    // Pastikan JSON string valid
+    const params = [JSON.stringify(fully_booked_dates), JSON.stringify(booked_slots)];
+    const result = await safeQuery(sql, params);
+    return result;
+  },
+
+  updateBookingPhoto: async ({ form_id, column, photo_path }) => {
+    // whitelist kolom biar aman
+    const allowed = new Set(['arrive_photo', 'before_photo', 'after_photo']);
+    if (!allowed.has(column)) throw new Error('INVALID_PHOTO_COLUMN');
+
+    const sql = `
+      UPDATE forms
+      SET ${column} = ?
+      WHERE id = ?
+    `;
+
+    return safeQuery(sql, [photo_path, form_id]);
+  },
+
+  getBookingPhotos: async ({ form_id }) => {
+    const sql = `
+      SELECT arrive_photo, before_photo, after_photo
+      FROM forms
+      WHERE id = ?
+      LIMIT 1
+    `;
+    const rows = await safeQuery(sql, [form_id]);
+    return rows?.[0] || { arrive_photo: null, before_photo: null, after_photo: null };
   },
 };
