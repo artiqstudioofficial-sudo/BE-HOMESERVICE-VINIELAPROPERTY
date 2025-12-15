@@ -152,17 +152,18 @@ module.exports = {
   // ---------------------------------------------------------------------------
   serviceStore: async (data) => {
     const sql = `
-      INSERT INTO services (
-        name, 
-        price, 
-        unit_price, 
-        service_category, 
-        duration_minute, 
-        duration_hour, 
-        is_guarantee
-      ) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
+    INSERT INTO services (
+      name,
+      price,
+      unit_price,
+      service_category,
+      duration_minute,
+      duration_hour,
+      is_guarantee,
+      point
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
     const params = [
       data.name,
@@ -172,6 +173,7 @@ module.exports = {
       data.duration_minute,
       data.duration_hour,
       data.is_guarantee,
+      data.point,
     ];
 
     const result = await safeQuery(sql, params);

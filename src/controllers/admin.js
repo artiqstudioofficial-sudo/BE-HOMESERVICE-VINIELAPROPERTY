@@ -301,17 +301,19 @@ module.exports = {
       duration_minute,
       duration_hour,
       is_guarantee,
+      point,
     } = req.body;
 
     try {
-      var data = {
-        name: name,
-        price: price,
-        unit_price: unit_price,
-        service_category: service_category,
-        duration_minute: duration_minute,
-        duration_hour: duration_hour,
-        is_guarantee: is_guarantee,
+      const data = {
+        name,
+        price,
+        unit_price,
+        service_category,
+        duration_minute,
+        duration_hour,
+        is_guarantee,
+        point,
       };
 
       const services = await Admin.serviceStore(data);
