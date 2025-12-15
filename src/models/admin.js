@@ -119,18 +119,19 @@ module.exports = {
   // ---------------------------------------------------------------------------
   serviceList: async () => {
     const sql = `
-      SELECT
-        s.id,
-        s.name,
-        s.price,
-        s.unit_price,
-        s.service_category,      
-        sc.name AS category      
-      FROM services s
-      LEFT JOIN service_categories sc
-        ON sc.id = s.service_category
-      ORDER BY sc.id, s.id
-    `;
+    SELECT
+      s.id,
+      s.name,
+      s.price,
+      s.unit_price,
+      s.service_category,
+      s.point,              
+      sc.name AS category
+    FROM services s
+    LEFT JOIN service_categories sc
+      ON sc.id = s.service_category
+    ORDER BY sc.id, s.id
+  `;
 
     return safeQuery(sql);
   },
