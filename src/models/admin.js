@@ -1,5 +1,5 @@
 // repositories/admin.js
-const { promisePool } = require('../configs/db');
+const { promisePool } = require("../configs/db");
 
 /**
  * Helper query dengan retry sekali kalau kena error koneksi
@@ -9,8 +9,11 @@ async function safeQuery(sql, params = [], retries = 1) {
     const [rows] = await promisePool.query(sql, params);
     return rows;
   } catch (err) {
-    if (retries > 0 && (err.code === 'ECONNRESET' || err.code === 'PROTOCOL_CONNECTION_LOST')) {
-      console.warn('MySQL query error, retrying once:', err.code);
+    if (
+      retries > 0 &&
+      (err.code === "ECONNRESET" || err.code === "PROTOCOL_CONNECTION_LOST")
+    ) {
+      console.warn("MySQL query error, retrying once:", err.code);
       return safeQuery(sql, params, retries - 1);
     }
     throw err;
@@ -388,13 +391,13 @@ module.exports = {
     const row = rows[0];
 
     const fullyBooked =
-      typeof row.fully_booked_dates === 'string'
-        ? JSON.parse(row.fully_booked_dates || '[]')
+      typeof row.fully_booked_dates === "string"
+        ? JSON.parse(row.fully_booked_dates || "[]")
         : row.fully_booked_dates || [];
 
     const bookedSlots =
-      typeof row.booked_slots === 'string'
-        ? JSON.parse(row.booked_slots || '[]')
+      typeof row.booked_slots === "string"
+        ? JSON.parse(row.booked_slots || "[]")
         : row.booked_slots || [];
 
     return {
@@ -412,15 +415,17 @@ module.exports = {
     `;
 
     // Pastikan JSON string valid
-    const params = [JSON.stringify(fully_booked_dates), JSON.stringify(booked_slots)];
+    const params = [
+      JSON.stringify(fully_booked_dates),
+      JSON.stringify(booked_slots),
+    ];
     const result = await safeQuery(sql, params);
     return result;
   },
 
   updateBookingPhoto: async ({ form_id, column, photo_path }) => {
-    // whitelist kolom biar aman
-    const allowed = new Set(['arrive_photo', 'before_photo', 'after_photo']);
-    if (!allowed.has(column)) throw new Error('INVALID_PHOTO_COLUMN');
+    const allowed = new Set(["arrive_photo", "before_photo", "after_photo"]);
+    if (!allowed.has(column)) throw new Error("INVALID_PHOTO_COLUMN");
 
     const sql = `
       UPDATE forms
@@ -439,6 +444,8 @@ module.exports = {
       LIMIT 1
     `;
     const rows = await safeQuery(sql, [form_id]);
-    return rows?.[0] || { arrive_photo: null, before_photo: null, after_photo: null };
+    return (
+      rows?.[0] || { arrive_photo: null, before_photo: null, after_photo: null }
+    );
   },
 };

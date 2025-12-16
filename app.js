@@ -21,7 +21,6 @@ const routerNav = require("./src/index");
  */
 const corsOptions = {
   origin: (origin, cb) => {
-    // allow request tanpa origin (curl/postman/server-to-server)
     if (!origin) return cb(null, true);
 
     const allowed = [
@@ -42,7 +41,7 @@ const corsOptions = {
     "Accept",
     "Origin",
   ],
-  maxAge: 86400, // cache preflight 24 jam
+  maxAge: 86400,
 };
 
 app.use(cors(corsOptions));
