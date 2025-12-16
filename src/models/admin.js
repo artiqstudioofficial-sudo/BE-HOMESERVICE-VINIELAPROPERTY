@@ -122,18 +122,19 @@ module.exports = {
   // ---------------------------------------------------------------------------
   serviceList: async () => {
     const sql = `
-      SELECT
-        s.id,
-        s.name,
-        s.price,
-        s.unit_price,
-        s.service_category,      
-        sc.name AS category      
-      FROM services s
-      LEFT JOIN service_categories sc
-        ON sc.id = s.service_category
-      ORDER BY sc.id, s.id
-    `;
+    SELECT
+      s.id,
+      s.name,
+      s.price,
+      s.unit_price,
+      s.service_category,
+      s.point,              
+      sc.name AS category
+    FROM services s
+    LEFT JOIN service_categories sc
+      ON sc.id = s.service_category
+    ORDER BY sc.id, s.id
+  `;
 
     return safeQuery(sql);
   },
@@ -155,17 +156,18 @@ module.exports = {
   // ---------------------------------------------------------------------------
   serviceStore: async (data) => {
     const sql = `
-      INSERT INTO services (
-        name, 
-        price, 
-        unit_price, 
-        service_category, 
-        duration_minute, 
-        duration_hour, 
-        is_guarantee
-      ) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
+    INSERT INTO services (
+      name,
+      price,
+      unit_price,
+      service_category,
+      duration_minute,
+      duration_hour,
+      is_guarantee,
+      point
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
     const params = [
       data.name,
@@ -175,6 +177,7 @@ module.exports = {
       data.duration_minute,
       data.duration_hour,
       data.is_guarantee,
+      data.point,
     ];
 
     const result = await safeQuery(sql, params);
