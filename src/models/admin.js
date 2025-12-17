@@ -276,6 +276,33 @@ module.exports = {
     return result.insertId;
   },
 
+  updateFormPatch: async (data) => {
+    const sets = [];
+    const params = [];
+
+    const push = (col, val) => {
+      if (typeof val === "undefined") return;
+      sets.push(`${col} = ?`);
+      params.push(val);
+    };
+
+    push("arrival_time", data.arrival_time);
+    push("start_time", data.start_time);
+    push("end_time", data.end_time);
+    push("work_duration_minutes", data.work_duration_minutes);
+    push("note", data.note);
+    push("additional_cost", data.additional_cost);
+
+    if (sets.length === 0) {
+      return { affectedRows: 0 };
+    }
+
+    const sql = `UPDATE forms SET ${sets.join(", ")} WHERE id = ?`;
+    params.push(data.form_id);
+
+    return await safeQuery(sql, params);
+  },
+
   // ---------------------------------------------------------------------------
   // Update Booking Status
   // ---------------------------------------------------------------------------

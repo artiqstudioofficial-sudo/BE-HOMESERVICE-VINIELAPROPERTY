@@ -540,9 +540,17 @@ module.exports = {
         form_id: req.body.form_id,
         user_id: req.body.user_id,
         status: req.body.status,
+        arrival_time: req.body.arrival_time,
+        start_time: req.body.start_time,
+        end_time: req.body.end_time,
+        work_duration_minutes: req.body.work_duration_minutes,
+        note: req.body.note,
+        additional_cost: req.body.additional_cost,
       };
       await Admin.updateBookingStatus(data);
       await Admin.updateBookingTechnician(data);
+
+      await Admin.updateFormPatch(data);
 
       misc.response(res, 200, false, "Update booking status successfully");
     } catch (e) {
