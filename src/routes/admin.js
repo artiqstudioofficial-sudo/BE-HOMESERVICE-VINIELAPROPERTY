@@ -39,7 +39,6 @@ Route.delete("/service-delete", admin.serviceDelete);
 // BOOKING
 Route.get("/user-booking-list", admin.userBookingList);
 Route.post("/store-booking", admin.storeBooking);
-Route.put("/update-booking", admin.updateBooking);
 Route.put("/update-booking-status", admin.updateBookingStatus);
 
 module.exports = Route;
