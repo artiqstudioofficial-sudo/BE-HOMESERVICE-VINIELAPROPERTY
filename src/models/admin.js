@@ -87,6 +87,10 @@ module.exports = {
       f.schedule_date,
       f.schedule_time,
       fs.name           AS status,
+      f.arrival_time,
+      f.start_time, 
+      f.end_time,
+      f.work_duration_minutes,
       f.note,
       f.additional_cost,
       f.arrive_photo,
@@ -234,19 +238,23 @@ module.exports = {
   // ----------------------------------------------------------------------------
   storeBooking: async (data) => {
     const sql = `
-      INSERT INTO forms (
-        fullname,
-        whatsapp,
-        address,
-        lat,
-        lng,
-        service,
-        status,
-        schedule_date,
-        schedule_time
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    INSERT INTO forms (
+      fullname,
+      whatsapp,
+      address,
+      lat,
+      lng,
+      arrival_time,
+      start_time,
+      end_time,
+      work_duration_minutes,
+      service,
+      status,
+      schedule_date,
+      schedule_time
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
     const params = [
       data.fullname,
@@ -254,6 +262,10 @@ module.exports = {
       data.address,
       data.lat,
       data.lng,
+      data.arrival_time,
+      data.start_time,
+      data.end_time,
+      data.work_duration_minutes,
       data.service,
       data.status,
       data.schedule_date,
@@ -262,6 +274,33 @@ module.exports = {
 
     const result = await safeQuery(sql, params);
     return result.insertId;
+  },
+
+  updateFormPatch: async (data) => {
+    const sets = [];
+    const params = [];
+
+    const push = (col, val) => {
+      if (typeof val === "undefined") return;
+      sets.push(`${col} = ?`);
+      params.push(val);
+    };
+
+    push("arrival_time", data.arrival_time);
+    push("start_time", data.start_time);
+    push("end_time", data.end_time);
+    push("work_duration_minutes", data.work_duration_minutes);
+    push("note", data.note);
+    push("additional_cost", data.additional_cost);
+
+    if (sets.length === 0) {
+      return { affectedRows: 0 };
+    }
+
+    const sql = `UPDATE forms SET ${sets.join(", ")} WHERE id = ?`;
+    params.push(data.form_id);
+
+    return await safeQuery(sql, params);
   },
 
   // ---------------------------------------------------------------------------
