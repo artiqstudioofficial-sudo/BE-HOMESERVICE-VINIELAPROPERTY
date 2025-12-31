@@ -14,11 +14,6 @@ const port = config.port;
 
 const routerNav = require('./src/index');
 
-/**
- * IMPORTANT:
- * - CORS harus dipasang PALING ATAS sebelum routes/middleware lain
- * - Tangani preflight OPTIONS untuk semua route
- */
 const corsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
@@ -32,7 +27,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  allowedHeaders: ['*'],
   maxAge: 86400,
 };
 
