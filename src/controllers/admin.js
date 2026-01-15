@@ -511,7 +511,11 @@ module.exports = {
         fullname,
         whatsapp,
         service,
-        status,
+        // kalau FE gak kirim status, set default (sesuaikan id status "pending" kamu)
+        status:
+          typeof status === "undefined" || status === null || status === ""
+            ? 1
+            : status,
         address,
         lat,
         lng,
@@ -523,14 +527,25 @@ module.exports = {
         schedule_time,
       };
 
-      await Admin.storeBooking(data);
+      // ✅ ATOMIC: reserve slot + insert form
+      // return: { form_id, slot, capacity, used, remaining }
+      const result = await Admin.storeBookingAtomic(data);
 
       return misc.response(res, 201, false, "Booking created successfully", {
-        form_id: formId,
+        form_id: result.form_id,
+        slot: result.slot,
+        capacity: result.capacity,
+        used: result.used,
+        remaining: result.remaining,
       });
     } catch (e) {
       console.log(e);
-      return misc.response(res, 400, true, e.message);
+
+      // reserveSlotAtomic melempar httpCode=409 untuk SLOT_FULL / DATE_NOT_AVAILABLE
+      const code = e.httpCode || 400;
+
+      // biar FE gampang, kamu bisa kirim code stringnya
+      return misc.response(res, code, true, e.message);
     }
   },
 

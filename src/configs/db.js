@@ -12,4 +12,21 @@ const pool = mysql.createPool({
 
 const promisePool = pool.promise();
 
-module.exports = { pool, promisePool };
+async function withTransaction(fn) {
+  const conn = await pool.promise().getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await fn(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch (_) {}
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+module.exports = { pool, promisePool, withTransaction };
