@@ -297,7 +297,8 @@ module.exports = {
       name,
       price,
       unit_price,
-      service_category,
+      service_category, // optional (kalau ada)
+      category, // ✅ kategori manual ketik (string)
       duration_minute,
       duration_hour,
       is_guarantee,
@@ -305,11 +306,26 @@ module.exports = {
     } = req.body;
 
     try {
+      if (!name?.trim()) throw new Error('name wajib');
+      if (price == null || String(price).trim() === '') throw new Error('price wajib');
+
+      // ✅ Tentukan category id:
+      // - kalau FE kirim service_category (angka) pakai itu
+      // - kalau tidak ada, pakai category string -> upsert ke table service_categories
+      let categoryId = Number(service_category || 0);
+
+      if (!categoryId) {
+        const categoryName = String(category || '').trim();
+        if (!categoryName) throw new Error('category wajib diisi');
+
+        categoryId = await Admin.ensureServiceCategory(categoryName);
+      }
+
       const data = {
-        name,
+        name: name.trim(),
         price,
         unit_price,
-        service_category,
+        service_category: categoryId,
         duration_minute,
         duration_hour,
         is_guarantee,
@@ -317,6 +333,7 @@ module.exports = {
       };
 
       const services = await Admin.serviceStore(data);
+
       misc.response(res, 200, false, 'Service list successfully', services);
     } catch (e) {
       console.log(e);
@@ -334,6 +351,7 @@ module.exports = {
       duration_minute,
       duration_hour,
       is_guarantee,
+      point,
     } = req.body;
 
     try {
@@ -346,6 +364,7 @@ module.exports = {
         duration_minute: duration_minute,
         duration_hour: duration_hour,
         is_guarantee: is_guarantee,
+        point: point,
       };
 
       const services = await Admin.serviceUpdate(data);
@@ -461,10 +480,7 @@ module.exports = {
         whatsapp,
         service,
         // kalau FE gak kirim status, set default (sesuaikan id status "pending" kamu)
-        status:
-          typeof status === "undefined" || status === null || status === ""
-            ? 1
-            : status,
+        status: typeof status === 'undefined' || status === null || status === '' ? 1 : status,
         address,
         lat,
         lng,
@@ -480,7 +496,7 @@ module.exports = {
       // return: { form_id, slot, capacity, used, remaining }
       const result = await Admin.storeBookingAtomic(data);
 
-      return misc.response(res, 201, false, "Booking created successfully", {
+      return misc.response(res, 201, false, 'Booking created successfully', {
         form_id: result.form_id,
         slot: result.slot,
         capacity: result.capacity,

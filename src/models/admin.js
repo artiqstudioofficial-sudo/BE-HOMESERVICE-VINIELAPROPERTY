@@ -325,6 +325,22 @@ module.exports = {
   },
 
   // ---------------------------------------------------------------------------
+  // Ensure Service Category (upsert by name)
+  // ---------------------------------------------------------------------------
+  ensureServiceCategory: async (categoryName) => {
+    // Wajib ada UNIQUE KEY di service_categories.name
+    const sql = `
+    INSERT INTO service_categories (name)
+    VALUES (?)
+    ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)
+  `;
+
+    const result = await safeQuery(sql, [categoryName]);
+    // mysql biasanya return insertId => id baru / id existing via LAST_INSERT_ID trick
+    return Number(result.insertId);
+  },
+
+  // ---------------------------------------------------------------------------
   // Service Update
   // ---------------------------------------------------------------------------
   serviceUpdate: async (data) => {
@@ -337,7 +353,8 @@ module.exports = {
         service_category = ?, 
         duration_minute = ?, 
         duration_hour = ?, 
-        is_guarantee = ?
+        is_guarantee = ?,
+        point = ?
       WHERE id = ?
     `;
 
@@ -349,6 +366,7 @@ module.exports = {
       data.duration_minute,
       data.duration_hour,
       data.is_guarantee,
+      data.point,
       data.id,
     ];
 
