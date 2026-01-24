@@ -17,7 +17,148 @@ async function safeQuery(sql, params = [], retries = 1) {
   }
 }
 
+/**
+ * ✅ Helper transaksi: jalankan fn(conn) dalam 1 transaksi
+ * NOTE: transaksi tidak bisa pakai safeQuery (karena safeQuery ambil koneksi random dari pool)
+ */
+async function withTransaction(fn) {
+  const conn = await promisePool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await fn(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch (_) {}
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// ---------- helpers for reserve ----------
+function parseJsonSafe(v, fallback) {
+  try {
+    if (typeof v === 'string') return JSON.parse(v || JSON.stringify(fallback));
+    return v ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeBookedToMap(bookedRaw) {
+  const map = {};
+
+  // legacy array => count occurrences
+  if (Array.isArray(bookedRaw)) {
+    for (const k of bookedRaw) {
+      if (typeof k !== 'string' || !k) continue;
+      map[k] = (map[k] || 0) + 1;
+    }
+    return map;
+  }
+
+  // object map
+  if (bookedRaw && typeof bookedRaw === 'object') {
+    for (const [k, v] of Object.entries(bookedRaw)) {
+      if (typeof k !== 'string' || !k) continue;
+      const n = typeof v === 'number' ? v : parseInt(String(v), 10);
+      map[k] = Number.isFinite(n) && n > 0 ? n : 0;
+    }
+    return map;
+  }
+
+  return {};
+}
+
+/**
+ * ✅ Reserve 1 kapasitas untuk slotKey (YYYY-MM-DD-HH:MM) secara ATOMIC.
+ * Wajib dipanggil di dalam transaksi (pakai withTransaction).
+ *
+ * Return:
+ * { status: "OK"|"FULL"|"DATE_BLOCKED", capacity, used, remaining }
+ */
+async function reserveSlotAtomic(conn, { slotKey }) {
+  // lock row id=1
+  const [rows] = await conn.query(
+    `
+    SELECT fully_booked_dates, booked_slots, max_capacity_per_slot
+    FROM availability_settings
+    WHERE id = 1
+    FOR UPDATE
+    `,
+  );
+
+  // kalau row belum ada, buat default
+  if (!rows || rows.length === 0) {
+    await conn.query(
+      `
+      INSERT INTO availability_settings (id, fully_booked_dates, booked_slots, max_capacity_per_slot, updated_at)
+      VALUES (1, JSON_ARRAY(), JSON_OBJECT(), 1, NOW())
+      `,
+    );
+  }
+
+  // ambil lagi (tetap lock)
+  const [[row]] = await conn.query(
+    `
+    SELECT fully_booked_dates, booked_slots, max_capacity_per_slot
+    FROM availability_settings
+    WHERE id = 1
+    FOR UPDATE
+    `,
+  );
+
+  const fullyBookedArr = parseJsonSafe(row?.fully_booked_dates, []);
+  const bookedRaw = parseJsonSafe(row?.booked_slots, {});
+  const bookedMap = normalizeBookedToMap(bookedRaw);
+
+  const capRaw = row?.max_capacity_per_slot;
+  const capNum = typeof capRaw === 'number' ? capRaw : parseInt(String(capRaw ?? ''), 10);
+  const capacity = Number.isFinite(capNum) && capNum > 0 ? capNum : 1;
+
+  const dateKey = String(slotKey).slice(0, 10); // "YYYY-MM-DD"
+
+  // tanggal full => reject
+  if (Array.isArray(fullyBookedArr) && fullyBookedArr.includes(dateKey)) {
+    return { status: 'DATE_BLOCKED', capacity, used: 0, remaining: 0 };
+  }
+
+  const used = bookedMap[slotKey] || 0;
+
+  // slot full => reject
+  if (used >= capacity) {
+    return { status: 'FULL', capacity, used, remaining: 0 };
+  }
+
+  // increment
+  bookedMap[slotKey] = used + 1;
+
+  // update JSON object map
+  await conn.query(
+    `
+    UPDATE availability_settings
+    SET booked_slots = ?, updated_at = NOW()
+    WHERE id = 1
+    `,
+    [JSON.stringify(bookedMap)],
+  );
+
+  return {
+    status: 'OK',
+    capacity,
+    used: used + 1,
+    remaining: capacity - (used + 1),
+  };
+}
+
 module.exports = {
+  // ✅ export helper transaksi & reserve
+  withTransaction,
+  reserveSlotAtomic,
+
   // ---------------------------------------------------------------------------
   // AUTH: Find user for login (users + roles)
   // ---------------------------------------------------------------------------
@@ -96,7 +237,6 @@ module.exports = {
       f.lat,
       f.lng
     FROM forms f
-    -- relasi form ke teknisi (boleh null)
     LEFT JOIN apply_technicians ats 
       ON ats.form_id = f.id
     LEFT JOIN users u 
@@ -105,13 +245,11 @@ module.exports = {
       ON ur.user_id = u.id
     LEFT JOIN roles r 
       ON r.id = ur.role_id
-      AND r.name = 'technician'  -- filter role di ON, bukan di WHERE
-
+      AND r.name = 'technician'
     INNER JOIN form_statuses fs 
       ON fs.id = f.status
     INNER JOIN services s
       ON s.id = f.service
-
     ORDER BY f.schedule_date DESC, f.schedule_time ASC
     `;
 
@@ -140,7 +278,6 @@ module.exports = {
       ON sc.id = s.service_category
     ORDER BY sc.id, s.id
   `;
-
     return safeQuery(sql);
   },
 
@@ -152,7 +289,6 @@ module.exports = {
       SELECT sc.id, sc.name 
       FROM service_categories sc
     `;
-
     return safeQuery(sql);
   },
 
@@ -185,8 +321,7 @@ module.exports = {
       data.point,
     ];
 
-    const result = await safeQuery(sql, params);
-    return result;
+    return safeQuery(sql, params);
   },
 
   // ---------------------------------------------------------------------------
@@ -217,8 +352,7 @@ module.exports = {
       data.id,
     ];
 
-    const result = await safeQuery(sql, params);
-    return result;
+    return safeQuery(sql, params);
   },
 
   // ---------------------------------------------------------------------------
@@ -229,13 +363,11 @@ module.exports = {
       DELETE FROM services 
       WHERE id = ?
     `;
-
-    const result = await safeQuery(sql, [data.id]);
-    return result;
+    return safeQuery(sql, [data.id]);
   },
 
   // ---------------------------------------------------------------------------
-  // Store Booking
+  // Store Booking (LEGACY - tidak atomic)
   // ----------------------------------------------------------------------------
   storeBooking: async (data) => {
     const sql = `
@@ -277,6 +409,76 @@ module.exports = {
     return result.insertId;
   },
 
+  /**
+   * ✅ Store Booking ATOMIC:
+   * reserve slot + insert forms dalam 1 transaksi
+   * kalau slot full -> throw Error("SLOT_FULL") / Error("DATE_NOT_AVAILABLE")
+   */
+  storeBookingAtomic: async (data) => {
+    return withTransaction(async (conn) => {
+      const slotKey = `${data.schedule_date}-${data.schedule_time}`;
+
+      const r = await reserveSlotAtomic(conn, { slotKey });
+
+      if (r.status === 'DATE_BLOCKED') {
+        const err = new Error('DATE_NOT_AVAILABLE');
+        err.httpCode = 409;
+        throw err;
+      }
+      if (r.status === 'FULL') {
+        const err = new Error('SLOT_FULL');
+        err.httpCode = 409;
+        throw err;
+      }
+
+      // insert forms pakai conn (bukan safeQuery)
+      const sql = `
+        INSERT INTO forms (
+          fullname,
+          whatsapp,
+          address,
+          lat,
+          lng,
+          arrival_time,
+          start_time,
+          end_time,
+          work_duration_minutes,
+          service,
+          status,
+          schedule_date,
+          schedule_time
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const params = [
+        data.fullname,
+        data.whatsapp,
+        data.address,
+        data.lat,
+        data.lng,
+        data.arrival_time,
+        data.start_time,
+        data.end_time,
+        data.work_duration_minutes,
+        data.service,
+        data.status,
+        data.schedule_date,
+        data.schedule_time,
+      ];
+
+      const [ins] = await conn.query(sql, params);
+
+      return {
+        form_id: ins.insertId,
+        slot: slotKey,
+        capacity: r.capacity,
+        used: r.used,
+        remaining: r.remaining,
+      };
+    });
+  },
+
   updateFormPatch: async (data) => {
     const sets = [];
     const params = [];
@@ -294,9 +496,7 @@ module.exports = {
     push('note', data.note);
     push('additional_cost', data.additional_cost);
 
-    if (sets.length === 0) {
-      return { affectedRows: 0 };
-    }
+    if (sets.length === 0) return { affectedRows: 0 };
 
     const sql = `UPDATE forms SET ${sets.join(', ')} WHERE id = ?`;
     params.push(data.form_id);
@@ -304,45 +504,34 @@ module.exports = {
     return await safeQuery(sql, params);
   },
 
-  // ---------------------------------------------------------------------------
-  // Update Booking Status
-  // ---------------------------------------------------------------------------
   updateBookingStatus: async (data) => {
     const sql = `
       UPDATE forms 
       SET status = ? 
       WHERE id = ?
     `;
-
-    const result = await safeQuery(sql, [data.status, data.form_id]);
-    return result;
+    return safeQuery(sql, [data.status, data.form_id]);
   },
 
-  // ---------------------------------------------------------------------------
-  // Update Booking Technician
-  // ---------------------------------------------------------------------------
   updateBookingTechnician: async (data) => {
     const updateSql = `
-    UPDATE apply_technicians
-    SET user_id = ?
-    WHERE form_id = ?
-  `;
+      UPDATE apply_technicians
+      SET user_id = ?
+      WHERE form_id = ?
+    `;
     const upd = await safeQuery(updateSql, [data.user_id, data.form_id]);
 
     if (!upd || upd.affectedRows === 0) {
       const insertSql = `
-      INSERT INTO apply_technicians (form_id, user_id)
-      VALUES (?, ?)
-    `;
+        INSERT INTO apply_technicians (form_id, user_id)
+        VALUES (?, ?)
+      `;
       return await safeQuery(insertSql, [data.form_id, data.user_id]);
     }
 
     return upd;
   },
 
-  // ---------------------------------------------------------------------------
-  // User Management Store
-  // ---------------------------------------------------------------------------
   userManagementStore: async (data) => {
     const sql = `
       INSERT INTO users (
@@ -352,62 +541,41 @@ module.exports = {
       )
       VALUES (?, ?, ?)
     `;
-
     const params = [data.fullname, data.username, data.password];
     const result = await safeQuery(sql, params);
     return result.insertId;
   },
 
-  // ---------------------------------------------------------------------------
-  // User Management Update
-  // ---------------------------------------------------------------------------
   userManagementUpdate: async (data) => {
     const sql = `
       UPDATE users 
       SET fullname = ?, username = ?, password = ? 
       WHERE id = ?
     `;
-
     const params = [data.fullname, data.username, data.password, data.id];
-    const result = await safeQuery(sql, params);
-    return result;
+    return safeQuery(sql, params);
   },
 
-  // ---------------------------------------------------------------------------
-  // User Management Delete
-  // ---------------------------------------------------------------------------
   userManagementDelete: async (data) => {
     const sql = `DELETE FROM users WHERE id = ?`;
-    const params = [data.id];
-    const result = await safeQuery(sql, params);
-    return result;
+    return safeQuery(sql, [data.id]);
   },
 
-  // ---------------------------------------------------------------------------
-  // User Role Store
-  // ---------------------------------------------------------------------------
   userRoleStore: async (data) => {
     const sql = `
       INSERT INTO user_roles (user_id, role_id) 
       VALUES (?, ?)
     `;
-
-    const result = await safeQuery(sql, [data.user_id, data.role_id]);
-    return result;
+    return safeQuery(sql, [data.user_id, data.role_id]);
   },
 
-  // ---------------------------------------------------------------------------
-  // User Role Update
-  // ---------------------------------------------------------------------------
   userRoleUpdate: async (data) => {
     const sql = `
       UPDATE user_roles 
       SET role_id = ? 
       WHERE user_id = ?
     `;
-
-    const result = await safeQuery(sql, [data.role_id, data.user_id]);
-    return result;
+    return safeQuery(sql, [data.role_id, data.user_id]);
   },
 
   getAvailability: async () => {
@@ -415,6 +583,7 @@ module.exports = {
       SELECT
         fully_booked_dates,
         booked_slots,
+        max_capacity_per_slot,
         updated_at
       FROM availability_settings
       WHERE id = 1
@@ -423,13 +592,14 @@ module.exports = {
 
     const rows = await safeQuery(sql);
 
-    if (!rows || rows.length === 0) {
-      return {
-        fully_booked_dates: [],
-        booked_slots: [],
-        updated_at: null,
-      };
-    }
+    const base = {
+      fully_booked_dates: [],
+      booked_slots: {}, // map counter
+      max_capacity_per_slot: 1,
+      updated_at: null,
+    };
+
+    if (!rows || rows.length === 0) return base;
 
     const row = rows[0];
 
@@ -444,8 +614,9 @@ module.exports = {
         : row.booked_slots || [];
 
     return {
-      fully_booked_dates: Array.isArray(fullyBooked) ? fullyBooked : [],
-      booked_slots: Array.isArray(bookedSlots) ? bookedSlots : [],
+      fully_booked_dates,
+      booked_slots,
+      max_capacity_per_slot,
       updated_at: row.updated_at || null,
     };
   },
@@ -472,7 +643,6 @@ module.exports = {
       SET ${column} = ?
       WHERE id = ?
     `;
-
     return safeQuery(sql, [photo_path, form_id]);
   },
 
