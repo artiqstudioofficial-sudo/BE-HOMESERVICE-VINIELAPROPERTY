@@ -297,8 +297,8 @@ module.exports = {
       name,
       price,
       unit_price,
-      service_category, // optional (kalau ada)
-      category, // ✅ kategori manual ketik (string)
+      service_category,
+      category,
       duration_minute,
       duration_hour,
       is_guarantee,
@@ -309,9 +309,6 @@ module.exports = {
       if (!name?.trim()) throw new Error('name wajib');
       if (price == null || String(price).trim() === '') throw new Error('price wajib');
 
-      // ✅ Tentukan category id:
-      // - kalau FE kirim service_category (angka) pakai itu
-      // - kalau tidak ada, pakai category string -> upsert ke table service_categories
       let categoryId = Number(service_category || 0);
 
       if (!categoryId) {
