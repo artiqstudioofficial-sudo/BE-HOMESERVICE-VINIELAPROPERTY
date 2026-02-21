@@ -14,19 +14,16 @@ const port = config.port;
 
 const routerNav = require('./src/index');
 
-/**
- * IMPORTANT:
- * - CORS harus dipasang PALING ATAS sebelum routes/middleware lain
- * - Tangani preflight OPTIONS untuk semua route
- */
 const corsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
 
     const allowed = [
       'https://homeservice.viniela.id',
+      'https://vinielahomeservice.id',
       'http://localhost:3000',
       'http://localhost:4137',
+      '',
     ];
     return allowed.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'));
   },
