@@ -21,9 +21,8 @@ const corsOptions = {
     const allowed = [
       'https://homeservice.viniela.id',
       'https://vinielahomeservice.id',
-      'http://localhost:3000',
+      'http://localhost:3222',
       'http://localhost:4137',
-      '',
     ];
     return allowed.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'));
   },
