@@ -598,15 +598,15 @@ module.exports = {
 
   getAvailability: async () => {
     const sql = `
-      SELECT
-        fully_booked_dates,
-        booked_slots,
-        max_capacity_per_slot,
-        updated_at
-      FROM availability_settings
-      WHERE id = 1
-      LIMIT 1
-    `;
+    SELECT
+      fully_booked_dates,
+      booked_slots,
+      max_capacity_per_slot,
+      updated_at
+    FROM availability_settings
+    WHERE id = 1
+    LIMIT 1
+  `;
 
     const rows = await safeQuery(sql);
 
@@ -621,20 +621,28 @@ module.exports = {
 
     const row = rows[0];
 
-    const fullyBooked =
-      typeof row.fully_booked_dates === 'string'
-        ? JSON.parse(row.fully_booked_dates || '[]')
-        : row.fully_booked_dates || [];
+    // safe JSON parse helper (biar tidak throw kalau data invalid)
+    const safeJsonParse = (value, fallback) => {
+      if (typeof value !== 'string') return value ?? fallback;
+      const trimmed = value.trim();
+      if (!trimmed) return fallback;
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return fallback;
+      }
+    };
 
-    const bookedSlots =
-      typeof row.booked_slots === 'string'
-        ? JSON.parse(row.booked_slots || '[]')
-        : row.booked_slots || [];
+    const fullyBooked = safeJsonParse(row.fully_booked_dates, []);
+    const bookedSlots = safeJsonParse(row.booked_slots, {});
 
     return {
-      fully_booked_dates,
-      booked_slots,
-      max_capacity_per_slot,
+      fully_booked_dates: Array.isArray(fullyBooked) ? fullyBooked : [],
+      booked_slots:
+        bookedSlots && typeof bookedSlots === 'object' && !Array.isArray(bookedSlots)
+          ? bookedSlots
+          : {},
+      max_capacity_per_slot: Number(row.max_capacity_per_slot) || 1,
       updated_at: row.updated_at || null,
     };
   },
