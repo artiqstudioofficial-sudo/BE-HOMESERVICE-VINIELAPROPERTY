@@ -14,26 +14,16 @@ const port = config.port;
 
 const routerNav = require('./src/index');
 
+// =======================
+// CORS - ALLOW ALL ORIGIN
+// =======================
 const corsOptions = {
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-
-    const allowed = [
-      'https://homeservice.viniela.id',
-      'https://vinielahomeservice.id',
-      'http://localhost:3222',
-      'http://localhost:4137',
-    ];
-    return allowed.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  maxAge: 86400,
+  origin: true, // allow semua origin (akan reflect origin request)
+  credentials: true, // supaya cookie/session tetap jalan
 };
 
 app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions));
+app.options(/.*/, cors(corsOptions)); // preflight aman untuk semua route
 
 app.set('trust proxy', 1);
 
