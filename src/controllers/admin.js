@@ -300,7 +300,7 @@ module.exports = {
   // ---------------------------------------------------------------------------
   serviceCategoryDetail: async (req, res) => {
     try {
-      const id = toInt(req.params.id);
+      const id = req.params.id;
       if (!id) return misc.response(res, 400, true, 'Invalid id');
 
       const item = await Admin.serviceCategoryDetail(id);
@@ -342,7 +342,7 @@ module.exports = {
   // ---------------------------------------------------------------------------
   serviceCategoryUpdate: async (req, res) => {
     try {
-      const id = toInt(req.params.id);
+      const id = req.params.id;
       if (!id) return misc.response(res, 400, true, 'Invalid id');
 
       const { name } = req.body || {};
@@ -374,7 +374,7 @@ module.exports = {
   // ---------------------------------------------------------------------------
   serviceCategoryDelete: async (req, res) => {
     try {
-      const id = toInt(req.params.id);
+      const id = req.params.id;
       if (!id) return misc.response(res, 400, true, 'Invalid id');
 
       const existing = await Admin.serviceCategoryDetail(id);
