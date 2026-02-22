@@ -286,10 +286,84 @@ module.exports = {
   // ---------------------------------------------------------------------------
   serviceCategoryList: async () => {
     const sql = `
-      SELECT sc.id, sc.name 
+      SELECT sc.id, sc.name
       FROM service_categories sc
+      ORDER BY sc.id DESC
     `;
     return safeQuery(sql);
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Detail
+  // ---------------------------------------------------------------------------
+  serviceCategoryDetail: async (id) => {
+    const sql = `
+      SELECT sc.id, sc.name
+      FROM service_categories sc
+      WHERE sc.id = ?
+      LIMIT 1
+    `;
+    const rows = await safeQuery(sql, [id]);
+    return rows?.[0] || null;
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Find By Name (optional - for unique guard)
+  // ---------------------------------------------------------------------------
+  serviceCategoryFindByName: async (name) => {
+    const sql = `
+      SELECT sc.id, sc.name
+      FROM service_categories sc
+      WHERE sc.name = ?
+      LIMIT 1
+    `;
+    const rows = await safeQuery(sql, [name]);
+    return rows?.[0] || null;
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Create
+  // ---------------------------------------------------------------------------
+  serviceCategoryCreate: async ({ name }) => {
+    const insertSql = `
+      INSERT INTO service_categories (name)
+      VALUES (?)
+    `;
+    const result = await safeQuery(insertSql, [name]);
+
+    // Aman untuk banyak driver mysql: insertId ada di result
+    const insertedId = result?.insertId;
+    if (!insertedId) {
+      // fallback: coba ambil terakhir (kalau driver tidak kasih insertId)
+      // tapi idealnya insertId ada
+      return { id: null, name };
+    }
+
+    return { id: insertedId, name };
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Update
+  // ---------------------------------------------------------------------------
+  serviceCategoryUpdate: async (id, { name }) => {
+    const sql = `
+      UPDATE service_categories
+      SET name = ?
+      WHERE id = ?
+    `;
+    await safeQuery(sql, [name, id]);
+    return { id, name };
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Delete
+  // ---------------------------------------------------------------------------
+  serviceCategoryDelete: async (id) => {
+    const sql = `
+      DELETE FROM service_categories
+      WHERE id = ?
+    `;
+    return safeQuery(sql, [id]);
   },
 
   // ---------------------------------------------------------------------------

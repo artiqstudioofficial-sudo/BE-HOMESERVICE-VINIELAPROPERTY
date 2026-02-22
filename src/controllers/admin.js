@@ -1,13 +1,13 @@
-const misc = require("../helpers/response");
-const { encryptPassword } = require("../helpers/utils");
-const Admin = require("../models/admin");
-const Applicant = require("../models/applicant");
-const Role = require("../models/role");
+const misc = require('../helpers/response');
+const { encryptPassword } = require('../helpers/utils');
+const Admin = require('../models/admin');
+const Applicant = require('../models/applicant');
+const Role = require('../models/role');
 
-const bcrypt = require("bcryptjs");
+const bcrypt = require('bcryptjs');
 
-const path = require("path");
-const fs = require("fs");
+const path = require('path');
+const fs = require('fs');
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
@@ -15,10 +15,10 @@ function ensureDir(dirPath) {
 
 function safeExtFromMime(mime) {
   const map = {
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
   };
   return map[mime] || null;
 }
@@ -34,19 +34,19 @@ module.exports = {
        * - file: image
        */
       const formIdRaw = req.body?.form_id;
-      const type = (req.body?.type || "").toString().toLowerCase();
+      const type = (req.body?.type || '').toString().toLowerCase();
       const form_id = Number(formIdRaw);
 
       if (!form_id || Number.isNaN(form_id)) {
-        return misc.response(res, 400, true, "INVALID_FORM_ID");
+        return misc.response(res, 400, true, 'INVALID_FORM_ID');
       }
 
-      if (!["arrival", "before", "after"].includes(type)) {
-        return misc.response(res, 400, true, "INVALID_PHOTO_TYPE");
+      if (!['arrival', 'before', 'after'].includes(type)) {
+        return misc.response(res, 400, true, 'INVALID_PHOTO_TYPE');
       }
 
       if (!req.files || !req.files.file) {
-        return misc.response(res, 400, true, "FILE_REQUIRED");
+        return misc.response(res, 400, true, 'FILE_REQUIRED');
       }
 
       const file = req.files.file;
@@ -56,7 +56,7 @@ module.exports = {
 
       const ext = safeExtFromMime(picked.mimetype);
       if (!ext) {
-        return misc.response(res, 400, true, "UNSUPPORTED_FILE_TYPE");
+        return misc.response(res, 400, true, 'UNSUPPORTED_FILE_TYPE');
       }
 
       // limit size (opsional): 5MB
@@ -65,13 +65,7 @@ module.exports = {
       //   return misc.response(res, 400, true, 'FILE_TOO_LARGE_MAX_5MB');
       // }
 
-      const uploadDir = path.join(
-        process.cwd(),
-        "public",
-        "uploads",
-        "forms",
-        String(form_id),
-      );
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'forms', String(form_id));
       ensureDir(uploadDir);
 
       const filename = `${type}-${Date.now()}.${ext}`;
@@ -84,11 +78,7 @@ module.exports = {
 
       // mapping kolom forms
       const column =
-        type === "arrival"
-          ? "arrive_photo"
-          : type === "before"
-            ? "before_photo"
-            : "after_photo";
+        type === 'arrival' ? 'arrive_photo' : type === 'before' ? 'before_photo' : 'after_photo';
 
       await Admin.updateBookingPhoto({
         form_id,
@@ -96,7 +86,7 @@ module.exports = {
         photo_path: publicPath,
       });
 
-      return misc.response(res, 200, false, "Photo uploaded successfully", {
+      return misc.response(res, 200, false, 'Photo uploaded successfully', {
         form_id,
         type,
         url: publicPath,
@@ -111,25 +101,19 @@ module.exports = {
     try {
       const form_id = Number(req.query?.form_id);
       if (!form_id || Number.isNaN(form_id)) {
-        return misc.response(res, 400, true, "INVALID_FORM_ID");
+        return misc.response(res, 400, true, 'INVALID_FORM_ID');
       }
 
       const data = await Admin.getBookingPhotos({ form_id });
 
-      return misc.response(
-        res,
-        200,
-        false,
-        "Booking photos fetched successfully",
-        {
-          form_id,
-          photos: {
-            arrival: data.arrive_photo || null,
-            before: data.before_photo || null,
-            after: data.after_photo || null,
-          },
+      return misc.response(res, 200, false, 'Booking photos fetched successfully', {
+        form_id,
+        photos: {
+          arrival: data.arrive_photo || null,
+          before: data.before_photo || null,
+          after: data.after_photo || null,
         },
-      );
+      });
     } catch (e) {
       console.log(e);
       return misc.response(res, 400, true, e.message);
@@ -145,18 +129,18 @@ module.exports = {
 
     try {
       if (!username || !password) {
-        return misc.response(res, 400, true, "USERNAME_PASSWORD_REQUIRED");
+        return misc.response(res, 400, true, 'USERNAME_PASSWORD_REQUIRED');
       }
 
       const user = await Admin.findUserForLogin(username);
 
       if (!user) {
-        return misc.response(res, 401, true, "INVALID_CREDENTIALS");
+        return misc.response(res, 401, true, 'INVALID_CREDENTIALS');
       }
 
       const ok = await bcrypt.compare(password, user.password);
       if (!ok) {
-        return misc.response(res, 401, true, "INVALID_CREDENTIALS");
+        return misc.response(res, 401, true, 'INVALID_CREDENTIALS');
       }
 
       req.session.user = {
@@ -167,13 +151,7 @@ module.exports = {
         role_id: user.role_id || null,
       };
 
-      return misc.response(
-        res,
-        200,
-        false,
-        "Login successfully",
-        req.session.user,
-      );
+      return misc.response(res, 200, false, 'Login successfully', req.session.user);
     } catch (e) {
       console.log(e);
       return misc.response(res, 400, true, e.message);
@@ -183,15 +161,9 @@ module.exports = {
   authMe: async (req, res) => {
     try {
       if (!req.session || !req.session.user) {
-        return misc.response(res, 401, true, "UNAUTHORIZED");
+        return misc.response(res, 401, true, 'UNAUTHORIZED');
       }
-      return misc.response(
-        res,
-        200,
-        false,
-        "Me successfully",
-        req.session.user,
-      );
+      return misc.response(res, 200, false, 'Me successfully', req.session.user);
     } catch (e) {
       console.log(e);
       return misc.response(res, 400, true, e.message);
@@ -201,17 +173,17 @@ module.exports = {
   authLogout: async (req, res) => {
     try {
       if (!req.session) {
-        return misc.response(res, 200, false, "Logout successfully");
+        return misc.response(res, 200, false, 'Logout successfully');
       }
 
       req.session.destroy((err) => {
         if (err) {
           console.log(err);
-          return misc.response(res, 400, true, "LOGOUT_FAILED");
+          return misc.response(res, 400, true, 'LOGOUT_FAILED');
         }
 
-        res.clearCookie("connect.sid");
-        return misc.response(res, 200, false, "Logout successfully");
+        res.clearCookie('connect.sid');
+        return misc.response(res, 200, false, 'Logout successfully');
       });
     } catch (e) {
       console.log(e);
@@ -223,17 +195,11 @@ module.exports = {
     try {
       const data = await Admin.getAvailability();
 
-      return misc.response(
-        res,
-        200,
-        false,
-        "Availability fetched successfully",
-        {
-          fullyBookedDates: data.fully_booked_dates || [],
-          bookedSlots: data.booked_slots || [],
-          updatedAt: data.updated_at,
-        },
-      );
+      return misc.response(res, 200, false, 'Availability fetched successfully', {
+        fullyBookedDates: data.fully_booked_dates || [],
+        bookedSlots: data.booked_slots || [],
+        updatedAt: data.updated_at,
+      });
     } catch (e) {
       console.log(e);
       return misc.response(res, 400, true, e.message);
@@ -246,16 +212,16 @@ module.exports = {
       const bookedSlots = req.body?.bookedSlots;
 
       if (!Array.isArray(fullyBookedDates) || !Array.isArray(bookedSlots)) {
-        return misc.response(res, 400, true, "INVALID_PAYLOAD");
+        return misc.response(res, 400, true, 'INVALID_PAYLOAD');
       }
 
       // basic validation format string (ringan aja)
       const allStrings =
-        fullyBookedDates.every((x) => typeof x === "string") &&
-        bookedSlots.every((x) => typeof x === "string");
+        fullyBookedDates.every((x) => typeof x === 'string') &&
+        bookedSlots.every((x) => typeof x === 'string');
 
       if (!allStrings) {
-        return misc.response(res, 400, true, "INVALID_PAYLOAD");
+        return misc.response(res, 400, true, 'INVALID_PAYLOAD');
       }
 
       await Admin.updateAvailability({
@@ -263,12 +229,7 @@ module.exports = {
         booked_slots: bookedSlots,
       });
 
-      return misc.response(
-        res,
-        200,
-        false,
-        "Availability updated successfully",
-      );
+      return misc.response(res, 200, false, 'Availability updated successfully');
     } catch (e) {
       console.log(e);
       return misc.response(res, 400, true, e.message);
@@ -281,13 +242,7 @@ module.exports = {
   userManagementList: async (_, res) => {
     try {
       const users = await Admin.userManagementList();
-      misc.response(
-        res,
-        200,
-        false,
-        "User management list successfully",
-        users,
-      );
+      misc.response(res, 200, false, 'User management list successfully', users);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -297,7 +252,7 @@ module.exports = {
   userBookingList: async (_, res) => {
     try {
       const users = await Admin.userBookingList();
-      misc.response(res, 200, false, "User booking list successfully", users);
+      misc.response(res, 200, false, 'User booking list successfully', users);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -307,7 +262,7 @@ module.exports = {
   userRoleList: async (_, res) => {
     try {
       const roles = await Role.list();
-      misc.response(res, 200, false, "User role list successfully", roles);
+      misc.response(res, 200, false, 'User role list successfully', roles);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -320,23 +275,113 @@ module.exports = {
   serviceList: async (_, res) => {
     try {
       const services = await Admin.serviceList();
-      misc.response(res, 200, false, "Service list successfully", services);
+      misc.response(res, 200, false, 'Service list successfully', services);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
     }
   },
 
+  // ---------------------------------------------------------------------------
+  // Service Category List
+  // ---------------------------------------------------------------------------
   serviceCategoryList: async (_, res) => {
     try {
       const services = await Admin.serviceCategoryList();
-      misc.response(
-        res,
-        200,
-        false,
-        "Service Category list successfully",
-        services,
-      );
+      misc.response(res, 200, false, 'Service Category list successfully', services);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Detail
+  // ---------------------------------------------------------------------------
+  serviceCategoryDetail: async (req, res) => {
+    try {
+      const id = toInt(req.params.id);
+      if (!id) return misc.response(res, 400, true, 'Invalid id');
+
+      const item = await Admin.serviceCategoryDetail(id);
+      if (!item) return misc.response(res, 404, true, 'Service Category not found');
+
+      misc.response(res, 200, false, 'Service Category detail successfully', item);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Create
+  // ---------------------------------------------------------------------------
+  serviceCategoryCreate: async (req, res) => {
+    try {
+      const { name } = req.body || {};
+      if (!name || String(name).trim().length < 2) {
+        return misc.response(res, 400, true, 'Name is required (min 2 chars)');
+      }
+
+      const payload = { name: String(name).trim() };
+
+      // optional: prevent duplicate name
+      const exists = await Admin.serviceCategoryFindByName(payload.name);
+      if (exists) return misc.response(res, 409, true, 'Service Category name already exists');
+
+      const created = await Admin.serviceCategoryCreate(payload);
+      misc.response(res, 201, false, 'Service Category created successfully', created);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Update
+  // ---------------------------------------------------------------------------
+  serviceCategoryUpdate: async (req, res) => {
+    try {
+      const id = toInt(req.params.id);
+      if (!id) return misc.response(res, 400, true, 'Invalid id');
+
+      const { name } = req.body || {};
+      if (!name || String(name).trim().length < 2) {
+        return misc.response(res, 400, true, 'Name is required (min 2 chars)');
+      }
+
+      const payload = { name: String(name).trim() };
+
+      const existing = await Admin.serviceCategoryDetail(id);
+      if (!existing) return misc.response(res, 404, true, 'Service Category not found');
+
+      // optional: prevent duplicate name (ignore current id)
+      const dup = await Admin.serviceCategoryFindByName(payload.name);
+      if (dup && dup.id !== id) {
+        return misc.response(res, 409, true, 'Service Category name already exists');
+      }
+
+      const updated = await Admin.serviceCategoryUpdate(id, payload);
+      misc.response(res, 200, false, 'Service Category updated successfully', updated);
+    } catch (e) {
+      console.log(e);
+      misc.response(res, 400, true, e.message);
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Service Category Delete
+  // ---------------------------------------------------------------------------
+  serviceCategoryDelete: async (req, res) => {
+    try {
+      const id = toInt(req.params.id);
+      if (!id) return misc.response(res, 400, true, 'Invalid id');
+
+      const existing = await Admin.serviceCategoryDetail(id);
+      if (!existing) return misc.response(res, 404, true, 'Service Category not found');
+
+      await Admin.serviceCategoryDelete(id);
+      misc.response(res, 200, false, 'Service Category deleted successfully', { id });
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -357,15 +402,14 @@ module.exports = {
     } = req.body;
 
     try {
-      if (!name?.trim()) throw new Error("name wajib");
-      if (price == null || String(price).trim() === "")
-        throw new Error("price wajib");
+      if (!name?.trim()) throw new Error('name wajib');
+      if (price == null || String(price).trim() === '') throw new Error('price wajib');
 
       let categoryId = Number(service_category || 0);
 
       if (!categoryId) {
-        const categoryName = String(category || "").trim();
-        if (!categoryName) throw new Error("category wajib diisi");
+        const categoryName = String(category || '').trim();
+        if (!categoryName) throw new Error('category wajib diisi');
 
         categoryId = await Admin.ensureServiceCategory(categoryName);
       }
@@ -383,7 +427,7 @@ module.exports = {
 
       const services = await Admin.serviceStore(data);
 
-      misc.response(res, 200, false, "Service list successfully", services);
+      misc.response(res, 200, false, 'Service list successfully', services);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -417,7 +461,7 @@ module.exports = {
       };
 
       const services = await Admin.serviceUpdate(data);
-      misc.response(res, 200, false, "Service list successfully", services);
+      misc.response(res, 200, false, 'Service list successfully', services);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -430,7 +474,7 @@ module.exports = {
     try {
       var data = { id: id };
       await Admin.serviceDelete(data);
-      misc.response(res, 200, false, "Service delete successfully");
+      misc.response(res, 200, false, 'Service delete successfully');
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -456,7 +500,7 @@ module.exports = {
 
       await Admin.userRoleStore(data);
 
-      misc.response(res, 200, false, "User management store successfully");
+      misc.response(res, 200, false, 'User management store successfully');
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -483,7 +527,7 @@ module.exports = {
       data.user_id = id;
       await Admin.userRoleUpdate(data);
 
-      misc.response(res, 200, false, "User management store successfully");
+      misc.response(res, 200, false, 'User management store successfully');
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -496,7 +540,7 @@ module.exports = {
     try {
       var data = { id: id };
       await Admin.userManagementDelete(data);
-      misc.response(res, 200, false, "User management delete successfully");
+      misc.response(res, 200, false, 'User management delete successfully');
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -529,10 +573,7 @@ module.exports = {
         whatsapp,
         service,
         // kalau FE gak kirim status, set default (sesuaikan id status "pending" kamu)
-        status:
-          typeof status === "undefined" || status === null || status === ""
-            ? 1
-            : status,
+        status: typeof status === 'undefined' || status === null || status === '' ? 1 : status,
         address,
         lat,
         lng,
@@ -548,7 +589,7 @@ module.exports = {
       // return: { form_id, slot, capacity, used, remaining }
       const result = await Admin.storeBookingAtomic(data);
 
-      return misc.response(res, 201, false, "Booking created successfully", {
+      return misc.response(res, 201, false, 'Booking created successfully', {
         form_id: result.form_id,
         slot: result.slot,
         capacity: result.capacity,
@@ -584,7 +625,7 @@ module.exports = {
 
       await Admin.updateFormPatch(data);
 
-      misc.response(res, 200, false, "Update booking status successfully");
+      misc.response(res, 200, false, 'Update booking status successfully');
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);
@@ -601,13 +642,7 @@ module.exports = {
       var data = { schedule_date: schedule_date };
       var schedules = await Applicant.getTechSchedule(data);
 
-      misc.response(
-        res,
-        200,
-        false,
-        "List tech schedule successfully",
-        schedules,
-      );
+      misc.response(res, 200, false, 'List tech schedule successfully', schedules);
     } catch (e) {
       console.log(e);
       misc.response(res, 400, true, e.message);

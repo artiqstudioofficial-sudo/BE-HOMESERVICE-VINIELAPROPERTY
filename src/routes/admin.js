@@ -32,6 +32,10 @@ Route.get('/tech-schedule', admin.techSchedule);
 // SERVICE
 Route.get('/service-list', admin.serviceList);
 Route.get('/service-category-list', admin.serviceCategoryList);
+Route.get('/service-category/:id', admin.serviceCategoryDetail);
+Route.post('/service-category', admin.serviceCategoryCreate);
+Route.put('/service-category/:id', admin.serviceCategoryUpdate);
+Route.delete('/service-category/:id', admin.serviceCategoryDelete);
 Route.post('/service-store', admin.serviceStore);
 Route.put('/service-update', admin.serviceUpdate);
 Route.delete('/service-delete', admin.serviceDelete);
